@@ -412,9 +412,6 @@ void reconnect()
             for (int i = 0; i <= 3; i++)
             {
                 Serial.println(nombre_completo_salida[i]);
-            }
-            for (int i = 0; i <= 3; i++)
-            {
                 Serial.println(nombre_completo_duracion[i]);
             }
             Serial.println(nombre_completo_ciclo);
@@ -426,9 +423,6 @@ void reconnect()
             for (int i = 0; i <= 3; i++)
             {
                 client.subscribe(nombre_completo_salida[i].c_str(), 1);
-            }
-            for (int i = 0; i <= 3; i++)
-            {
                 client.subscribe(nombre_completo_duracion[i].c_str(), 1);
             }
             client.subscribe(nombre_completo_ciclo.c_str(), 1);
@@ -645,14 +639,18 @@ void loop()
         if (now - temppruebas > 120000)
         {
             temppruebas = now;
-            Serial.println(nombre_completo_duracion);
-            Serial.println(Duracion);
+
+            for (int i = 0; i <= 3; i++)
+            {
+                Serial.println(nombre_completo_duracion[i]);
+                Serial.println(Duracion[i]);
+                Serial.println(Estado[i]);
+            }
             Serial.println(nombre_completo_ciclo);
             Serial.println(Ciclo);
             Serial.println(nombre_completo_tiempo_inicio);
             Serial.println(Tiempo_inicio);
             Serial.println(nombre_estado);
-            Serial.println(Estado);
 
             unsigned long t1 = Tiempo_inicio / minutos;
             unsigned long t2 = Duracion / minutos;
