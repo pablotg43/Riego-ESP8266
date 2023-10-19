@@ -17,11 +17,9 @@ const char *passwordhs = "123456789";
 
 // Entradas Digitales
 const int Entrada_configuracion = 12;
-const int Entrada_start = 4;
-const int Entrada_stop = 5;
 
 // Salidas Digitales
-const int Salida_1 = 14;
+const int Salida[4] = {5,4,0,2};
 
 // Inicialización Variables
 unsigned long horas = 3600000;
@@ -32,28 +30,29 @@ unsigned long tempinicio = 0;
 unsigned long tempfin = 0;
 unsigned long tempciclo = 0;
 int Valor_entrada_configuracion = 0;
-int Valor_entrada_start = 0;
-int Valor_entrada_stop = 0;
-boolean start = false;
-boolean stop = false;
-int Estado = 0;                  // 0: INICIANDO, 1: ACTIVO, 2: EN ESPERA, 3: PARADO
+
+int Estado[4] = {0, 0, 0, 0};    // 0: INICIANDO, 1: ACTIVO, 2: EN ESPERA, 3: PARADO
+boolean start[4] ={false,false,false,false};
+boolean stop[4] ={false,false,false,false};
+
 unsigned long Tiempo_inicio = 0; // minutos hasta primer inicio
-unsigned long Duracion = 0;      // minutos activo
+unsigned long Duracion[4] = {0,0,0,0};      // minutos activo
 unsigned long Ciclo = 0;         // horas entre inicios
-String s1c = "  ";
-String s1ctext = "";
+
+String sc[4] = {"s1","s2","s3","s4"};
+String sctext[4] = {"s1","s2","s3","s4"};
 
 // Nombres equipos y señales
 int numero_puerto_MQTT = 1883;
 const char *nmqtt = "ptg43.mooo.com";
 
-const char *nombre_dispositivo = "wemo_depuradora";
+const char *nombre_dispositivo = "wemo_riego_1";
 
 String nombre_estado = "Salida_1";
-String nombre_completo_salida_1 = "Salida_1";
+String nombre_completo_salida[4] = {"Salida_1","Salida_2","Salida_3","Salida_4"};
 String nombre_completo_entrada_configuracion = "Entrada_Configuracion";
 String nombre_completo_tiempo_inicio = "Salida_1";
-String nombre_completo_duracion = "Salida_1";
+String nombre_completo_duracion[4] = {"Salida_1","Salida_2","Salida_3","Salida_4"};
 String nombre_completo_ciclo = "Salida_1";
 
 boolean conf = false;
@@ -65,16 +64,6 @@ char msg[50];
 int value = 0;
 
 #include <servidor.txt>
-
-void IRAM_ATTR start_manual()
-{
-  start = true;
-}
-
-void IRAM_ATTR paro_manual()
-{
-  stop = true;
-}
 
 void notFound(AsyncWebServerRequest *request)
 {
@@ -150,17 +139,62 @@ String processor(const String &var)
   {
     return readFile(LittleFS, "/tiempo_inicio.txt");
   }
-  else if (var == "duracion")
+  else if (var == "duracion_1")
   {
-    return readFile(LittleFS, "/duracion.txt");
+    return readFile(LittleFS, "/duracion_1.txt");
+  }
+    else if (var == "duracion_2")
+  {
+    return readFile(LittleFS, "/duracion_2.txt");
+  }
+    else if (var == "duracion_3")
+  {
+    return readFile(LittleFS, "/duracion_3.txt");
+  }
+    else if (var == "duracion_4")
+  {
+    return readFile(LittleFS, "/duracion_4.txt");
   }
   else if (var == "ciclo")
   {
     return readFile(LittleFS, "/ciclo.txt");
   }
-  else if (var == "estado_señal")
+  else if (var == "estado_señal_1")
   {
-    if (digitalRead(Salida_1))
+    if (digitalRead(Salida[0]))
+    {
+      return "On";
+    }
+    else
+    {
+      return "Off";
+    }
+  }
+  else if (var == "estado_señal_2")
+  {
+    if (digitalRead(Salida[1]))
+    {
+      return "On";
+    }
+    else
+    {
+      return "Off";
+    }
+  }
+    else if (var == "estado_señal_3")
+  {
+    if (digitalRead(Salida[3]))
+    {
+      return "On";
+    }
+    else
+    {
+      return "Off";
+    }
+  }
+    else if (var == "estado_señal_4")
+  {
+    if (digitalRead(Salida[4]))
     {
       return "On";
     }
@@ -217,25 +251,27 @@ void setup_wifi()
   Serial.println(WiFi.localIP());
 }
 
-void s1_on()
+void s1_on(int i)
 {
-  start = true;
+  start[i] = true;
 }
 
-void s1_off()
+void s1_off(int i)
 {
-  stop = true;
+  stop[i] = true;
 }
 
-void s2(String tiempo)
+void s2(String j, String tiempo)
 {
+  int i=j.toInt();
   int duracion = tiempo.toInt();
-  Duracion = duracion * minutos;
-  Serial.println("Duracion: " + Duracion);
-  writeFile(LittleFS, "/duracion.txt", tiempo.c_str());
-  if (Duracion == 0)
+  String nombre= "/duracion_"+ j + ".txt";
+  Duracion[i] = duracion * minutos;
+  Serial.println("Duracion: " + Duracion[i]);
+  writeFile(LittleFS, nombre.c_str(), tiempo.c_str());
+  if (Duracion[i] == 0)
   {
-    Estado = 3;
+    Estado[i] = 3;
   }
 }
 
@@ -253,7 +289,11 @@ void s4(String tiempo)
   Tiempo_inicio = tiempo_inicio * minutos;
   Serial.println("Tiempo inicio: " + Tiempo_inicio);
   writeFile(LittleFS, "/tiempo_inicio.txt", tiempo.c_str());
-  Estado = 0;
+  
+  for (int i = 0; i <= 3; i++) {
+    Estado[i] = 0;
+  }
+
 }
 
 void callback(char *topic, byte *message, unsigned int length)
@@ -272,21 +312,72 @@ void callback(char *topic, byte *message, unsigned int length)
   }
   Serial.println();
 
-  if (String(topic) == nombre_completo_salida_1)
+  if (String(topic) == nombre_completo_salida[0])
   {
     if (mensaje == "on")
     {
-      s1_on();
+      s1_on(0);
     }
     else if (mensaje == "off")
     {
-      s1_off();
+      s1_off(0);
     }
   }
 
-  if (String(topic) == nombre_completo_duracion)
+  if (String(topic) == nombre_completo_salida[1])
   {
-    s2(mensaje);
+    if (mensaje == "on")
+    {
+      s1_on(1);
+    }
+    else if (mensaje == "off")
+    {
+      s1_off(1);
+    }
+  }
+
+  if (String(topic) == nombre_completo_salida[2])
+  {
+    if (mensaje == "on")
+    {
+      s1_on(2);
+    }
+    else if (mensaje == "off")
+    {
+      s1_off(2);
+    }
+  }
+
+  if (String(topic) == nombre_completo_salida[3])
+  {
+    if (mensaje == "on")
+    {
+      s1_on(3);
+    }
+    else if (mensaje == "off")
+    {
+      s1_off(3);
+    }
+  }
+
+  if (String(topic) == nombre_completo_duracion[0])
+  {
+    s2("0",mensaje);
+  }
+
+  if (String(topic) == nombre_completo_duracion[1])
+  {
+    s2("1",mensaje);
+  }
+
+  if (String(topic) == nombre_completo_duracion[2])
+  {
+    s2("2",mensaje);
+  }
+
+  if (String(topic) == nombre_completo_duracion[3])
+  {
+    s2("3",mensaje);
   }
 
   if (String(topic) == nombre_completo_ciclo)
@@ -318,8 +409,12 @@ void reconnect()
 
       Serial.println("");
       Serial.println("Salidas");
-      Serial.println(nombre_completo_salida_1);
-      Serial.println(nombre_completo_duracion);
+      for (int i = 0; i <= 3; i++) {
+        Serial.println(nombre_completo_salida[i]);
+      }
+      for (int i = 0; i <= 3; i++) {
+        Serial.println(nombre_completo_duracion[i]);
+      }
       Serial.println(nombre_completo_ciclo);
       Serial.println(nombre_completo_tiempo_inicio);
       Serial.println(nombre_estado);
