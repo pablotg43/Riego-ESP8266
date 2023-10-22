@@ -31,16 +31,17 @@ unsigned long tempfin = 0;
 unsigned long tempciclo = 0;
 int Valor_entrada_configuracion = 0;
 
-int Estado[4] = {0, 0, 0, 0}; // 0: INICIANDO, 1: ACTIVO, 2: EN ESPERA, 3: PARADO
+int Estado = 3; // 0: INICIANDO, 1: ACTIVO, 2: EN ESPERA, 3: PARADO
 boolean start[4] = {false, false, false, false};
 boolean stop[4] = {false, false, false, false};
-
+boolean general = false;
+int riego_activo = 1000;
 unsigned long Tiempo_inicio = 0;          // minutos hasta primer inicio
 unsigned long Duracion[4] = {0, 0, 0, 0}; // minutos activo
 unsigned long Ciclo = 0;                  // horas entre inicios
 
-String sc[4] = {"s1", "s2", "s3", "s4"};
-String sctext[4] = {"s1", "s2", "s3", "s4"};
+String s1c[4] = {"s1", "s2", "s3", "s4"};
+String s1ctext[4] = {"s1", "s2", "s3", "s4"};
 
 // Nombres equipos y señales
 int numero_puerto_MQTT = 1883;
@@ -50,6 +51,7 @@ const char *nombre_dispositivo = "wemo_riego_1";
 
 String nombre_estado = "Salida_1";
 String nombre_completo_salida[4] = {"Salida_1", "Salida_2", "Salida_3", "Salida_4"};
+String nombre_completo_salida_general = "Entrada_Configuracion";
 String nombre_completo_entrada_configuracion = "Entrada_Configuracion";
 String nombre_completo_tiempo_inicio = "Salida_1";
 String nombre_completo_duracion[4] = {"Salida_1", "Salida_2", "Salida_3", "Salida_4"};
@@ -253,12 +255,14 @@ void setup_wifi()
 
 void s1_on(int i)
 {
-    start[i] = true;
+
+    Start(i);
 }
 
 void s1_off(int i)
 {
-    stop[i] = true;
+
+    Stop(i);
 }
 
 void s2(String j, String tiempo)
@@ -269,10 +273,6 @@ void s2(String j, String tiempo)
     Duracion[i] = duracion * minutos;
     Serial.println("Duracion: " + Duracion[i]);
     writeFile(LittleFS, nombre.c_str(), tiempo.c_str());
-    if (Duracion[i] == 0)
-    {
-        Estado[i] = 3;
-    }
 }
 
 void s3(String tiempo)
@@ -281,6 +281,14 @@ void s3(String tiempo)
     Ciclo = ciclo * horas;
     Serial.println("Ciclo: " + Ciclo);
     writeFile(LittleFS, "/ciclo.txt", tiempo.c_str());
+    if (ciclo == 0)
+    {
+        Estado = 3;
+    }
+    else
+    {
+        Estado = 0;
+    }
 }
 
 void s4(String tiempo)
@@ -289,11 +297,7 @@ void s4(String tiempo)
     Tiempo_inicio = tiempo_inicio * minutos;
     Serial.println("Tiempo inicio: " + Tiempo_inicio);
     writeFile(LittleFS, "/tiempo_inicio.txt", tiempo.c_str());
-
-    for (int i = 0; i <= 3; i++)
-    {
-        Estado[i] = 0;
-    }
+    Estado = 0;
 }
 
 void callback(char *topic, byte *message, unsigned int length)
@@ -310,7 +314,6 @@ void callback(char *topic, byte *message, unsigned int length)
         Serial.print((char)message[i]);
         mensaje += (char)message[i];
     }
-    Serial.println();
 
     if (String(topic) == nombre_completo_salida[0])
     {
@@ -360,6 +363,18 @@ void callback(char *topic, byte *message, unsigned int length)
         }
     }
 
+    if (String(topic) == nombre_completo_salida_general)
+    {
+        if (mensaje == "on")
+        {
+            general = true;
+        }
+        else if (mensaje == "off")
+        {
+            general = false;
+        }
+    }
+
     if (String(topic) == nombre_completo_duracion[0])
     {
         s2("0", mensaje);
@@ -405,7 +420,7 @@ void reconnect()
         if (client.connect(clientId.c_str()))
         {
             Serial.println("Conectado");
-            client.publish("Puerta/Estado", "MQTT conectado");
+            client.publish("Riego_1/Estado", "MQTT conectado");
 
             Serial.println("");
             Serial.println("Salidas");
@@ -414,9 +429,11 @@ void reconnect()
                 Serial.println(nombre_completo_salida[i]);
                 Serial.println(nombre_completo_duracion[i]);
             }
+            Serial.println(nombre_estado);
+
+            Serial.println(nombre_completo_salida_general);
             Serial.println(nombre_completo_ciclo);
             Serial.println(nombre_completo_tiempo_inicio);
-            Serial.println(nombre_estado);
 
             Serial.println("");
 
@@ -425,6 +442,7 @@ void reconnect()
                 client.subscribe(nombre_completo_salida[i].c_str(), 1);
                 client.subscribe(nombre_completo_duracion[i].c_str(), 1);
             }
+            client.subscribe(nombre_completo_salida_general.c_str(), 1);
             client.subscribe(nombre_completo_ciclo.c_str(), 1);
             client.subscribe(nombre_completo_tiempo_inicio.c_str(), 1);
         }
@@ -553,7 +571,18 @@ void setup()
         String puerto_MQTTa = readFile(LittleFS, "/puerto_MQTT.txt");
         String dispositivoa = readFile(LittleFS, "/dispositivo.txt");
         String tiempo_inicioa = readFile(LittleFS, "/tiempo_inicio.txt");
+        String generala = readFile(LittleFS, "/general.txt");
         String duraciona[4] = {"a", "d", "d", "f"};
+
+        if (generala == "1")
+        {
+            general = true;
+        }
+        else
+        {
+            general = false;
+        }
+
         for (int i = 0; i <= 3; i++)
         {
             String nombre = "/duracion_" + String(i) + ".txt";
@@ -567,15 +596,20 @@ void setup()
         {
             Duracion[i] = atol(duraciona[i].c_str());
             Duracion[i] = Duracion[i] * minutos;
-            if (Duracion[i] == 0)
-            {
-                Estado[i] = 3;
-            }
         }
+
         Ciclo = atol(cicloa.c_str());
         Tiempo_inicio = Tiempo_inicio * minutos;
         Ciclo = Ciclo * horas;
 
+        if (Ciclo == 0)
+        {
+            Estado = 3;
+        }
+        else
+        {
+            Estado = 0;
+        }
         ssid = ssida.c_str();
         password = passworda.c_str();
         int str_len = servidor_MQTTa.length() + 1;
@@ -590,18 +624,18 @@ void setup()
 
         setup_wifi();
 
-        nombre_estado = String(nombre_dispositivo) + "/" + "estado";
-
         for (int i = 0; i <= 3; i++)
         {
             nombre_completo_salida[i] = String(nombre_dispositivo) + "/" + "salida_" + String(i);
             nombre_completo_duracion[i] = String(nombre_dispositivo) + "/" + "duracion_" + String(i);
-            sc[i] = nombre_completo_salida[i] + "c";
+            s1c[i] = nombre_completo_salida[i] + "c";
 
             pinMode(Salida[i], OUTPUT);
             digitalWrite(Salida[i], LOW);
         }
 
+        nombre_estado = String(nombre_dispositivo) + "/" + "estado";
+        nombre_completo_salida_general = String(nombre_dispositivo) + "/" + "general";
         nombre_completo_tiempo_inicio = String(nombre_dispositivo) + "/" + "tiempo_inicio";
         nombre_completo_ciclo = String(nombre_dispositivo) + "/" + "ciclo";
 
@@ -618,6 +652,8 @@ void setup()
 
 void loop()
 {
+    boolean estado_loop = false;
+    boolean stop_loop = false;
     Valor_entrada_configuracion = digitalRead(Entrada_configuracion);
 
     if (Valor_entrada_configuracion == true)
@@ -644,33 +680,46 @@ void loop()
             {
                 Serial.println(nombre_completo_duracion[i]);
                 Serial.println(Duracion[i]);
-                Serial.println(Estado[i]);
             }
+            Serial.println(Estado);
+            Serial.println(nombre_estado);
+            Serial.println(nombre_completo_salida_general);
             Serial.println(nombre_completo_ciclo);
             Serial.println(Ciclo);
             Serial.println(nombre_completo_tiempo_inicio);
             Serial.println(Tiempo_inicio);
-            Serial.println(nombre_estado);
 
             unsigned long t1 = Tiempo_inicio / minutos;
-            unsigned long t2 = Duracion / minutos;
+            unsigned long t2[4] = {};
             unsigned long t3 = Ciclo / horas;
+            String a = "";
+            String c[4] = {};
+            String sa = "";
+            String sc[4] = {};
 
-            String a = (String)Estado;
+            for (int i = 0; i <= 3; i++)
+            {
+                t2[i] = Duracion[i] / minutos;
+                c[i] = (String)t2[i];
+                String sc[i] = nombre_completo_duracion[i] + "c";
+            }
+            a = (String)Estado;
             String b = (String)t1;
-            String c = (String)t2;
             String d = (String)t3;
-
             String sa = nombre_estado;
+
             String sb = nombre_completo_tiempo_inicio + "c";
-            String sc = nombre_completo_duracion + "c";
             String sd = nombre_completo_ciclo + "c";
+
+            for (int i = 0; i <= 3; i++)
+            {
+                client.publish(sc[i].c_str(), c[i].c_str());
+                client.publish(s1c[i].c_str(), s1ctext[i].c_str());
+            }
 
             client.publish(sa.c_str(), a.c_str());
             client.publish(sb.c_str(), b.c_str());
-            client.publish(sc.c_str(), c.c_str());
             client.publish(sd.c_str(), d.c_str());
-            client.publish(s1c.c_str(), s1ctext.c_str());
         }
 
         switch (Estado)
@@ -678,55 +727,88 @@ void loop()
         case 0:
             if (now - tempinicio > Tiempo_inicio)
             {
-                start = true;
-                tempfin = now;
-                tempciclo = now;
+                estado_loop = true;
+                riego_activo = 0;
+                start[riego_activo] = true;
             }
 
             break;
         case 1:
-            if (now - tempfin > Duracion)
+            if (now - tempfin > Duracion[riego_activo])
             {
-                stop = true;
+                stop[riego_activo] = true;
+                riego_activo = riego_activo + 1;
+                if (riego_activo == 4)
+                {
+                    estado_loop = false;
+                    if (Estado != 3)
+                    {
+                        Estado = 2;
+                    }
+                }
+                else
+                {
+                    start[riego_activo] = true;
+                }
             }
             break;
         case 2:
             if (now - tempciclo > Ciclo)
             {
-                start = true;
+                estado_loop = true;
+                riego_activo = 0;
+                start[riego_activo] = true;
             }
             break;
         case 3:
             break;
         }
 
-        if (start)
+        if (estado_loop && start[riego_activo])
         {
             tempfin = now;
-            tempciclo = now;
-            start = false;
+
+            start[riego_activo] = false;
+
             if (Estado != 3)
             {
                 Estado = 1;
             }
-            Serial.println("Cambiando " + nombre_completo_salida_1 + " a: on");
-            digitalWrite(Salida_1, HIGH);
-            s1ctext = "on";
-            client.publish(s1c.c_str(), s1ctext.c_str());
+
+            Serial.println("Cambiando " + nombre_completo_salida[riego_activo] + " a: on");
+            digitalWrite(riego_activo, HIGH);
+            s1ctext[riego_activo] = "on";
+            client.publish(s1c[riego_activo].c_str(), s1ctext[riego_activo].c_str());
+
+            if (riego_activo == 0)
+            {
+                tempciclo = now;
+            }
         }
 
-        if (stop)
+        if (stop[riego_activo])
         {
-            stop = false;
-            if (Estado != 3)
-            {
-                Estado = 2;
-            }
-            Serial.println("Cambiando " + nombre_completo_salida_1 + " a: off");
-            digitalWrite(Salida_1, LOW);
-            s1ctext = "off";
-
-            client.publish(s1c.c_str(), s1ctext.c_str());
+            stop[riego_activo] = false;
+            Serial.println("Cambiando " + nombre_completo_salida[riego_activo] + " a: off");
+            digitalWrite(riego_activo, LOW);
+            s1ctext[riego_activo] = "off";
+            client.publish(s1c[riego_activo].c_str(), s1ctext[riego_activo].c_str());
         }
     }
+}
+
+void Start(int salida)
+{
+    Serial.println("Cambiando " + nombre_completo_salida[salida] + " a: on");
+    digitalWrite(salida, HIGH);
+    s1ctext[salida] = "on";
+    client.publish(s1c[salida].c_str(), s1ctext[salida].c_str());
+}
+
+void Stop(int salida)
+{
+    Serial.println("Cambiando " + nombre_completo_salida[salida] + " a: off");
+    digitalWrite(salida, LOW);
+    s1ctext[salida] = "off";
+    client.publish(s1c[salida].c_str(), s1ctext[salida].c_str());
 }
