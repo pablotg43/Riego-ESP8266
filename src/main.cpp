@@ -36,7 +36,7 @@ boolean start[4] = {false, false, false, false};
 boolean stop[4] = {false, false, false, false};
 boolean general = false;
 int riego_activo = 1000;
-unsigned long Tiempo_inicio = 0;          // minutos hasta primer inicio
+unsigned long Tiempo_inicio = 0;          // minutos hasta primer inicio  
 unsigned long Duracion[4] = {0, 0, 0, 0}; // minutos activo
 unsigned long Ciclo = 0;                  // horas entre inicios
 
