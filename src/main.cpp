@@ -17,38 +17,59 @@ const char *passwordhs = "123456789";
 
 // Entradas Digitales
 const int Entrada_configuracion = 12;
+int Valor_entrada_configuracion = 0;
 
 // Salidas Digitales
 const int Salida[4] = {5, 4, 0, 2};
 
+enum Estados {
+  Reposo,
+  Riego_1,
+  Riego_2,
+  Riego_3,
+  Riego_4,
+  Esperando_inicio,
+  Esperando_ciclo,
+  Ciclo_riego_1,
+  Ciclo_riego_2,
+  Ciclo_riego_3,
+  Ciclo_riego_4,
+  Configuracion
+};
+
+Estados estado = Estados::Reposo;
+
 // Inicialización Variables
-unsigned long horas = 3600000;
-unsigned long minutos = 60000;
+// unsigned long horas = 3600000;
+// unsigned long minutos = 60000;
 
-unsigned long temppruebas = 0;
-unsigned long tempinicio = 0;
-unsigned long tempfin = 0;
-unsigned long tempciclo = 0;
-int Valor_entrada_configuracion = 0;
+unsigned long horas = 60000;
+unsigned long minutos = 1000;
 
-int Estado = 3; // 0: INICIANDO, 1: ACTIVO, 2: EN ESPERA, 3: PARADO
-boolean start[4] = {false, false, false, false};
-boolean stop[4] = {false, false, false, false};
-boolean general = false;
-int riego_activo = 1000;
-unsigned long Tiempo_inicio = 0;          // minutos hasta primer inicio  
+//Temporizadores
+unsigned long now = 0;
+unsigned long temp_comms = 0;
+unsigned long temp_inicio = 0;
+unsigned long temp_ciclo = 0;
+unsigned long temp_estado = 0;
+
+//Tiempos
+unsigned long Tiempo_inicio = 0;          // minutos hasta primer inicio
 unsigned long Duracion[4] = {0, 0, 0, 0}; // minutos activo
 unsigned long Ciclo = 0;                  // horas entre inicios
 
+//Ordenes
+boolean start[4] = {false, false, false, false};
+boolean stop = false;
+boolean primera_vez=false;
+//Varios
 String s1c[4] = {"s1", "s2", "s3", "s4"};
-String s1ctext[4] = {"s1", "s2", "s3", "s4"};
+String s1ctext[4] = {"off", "off", "off", "off"};
 
 // Nombres equipos y señales
 int numero_puerto_MQTT = 1883;
 const char *nmqtt = "ptg43.mooo.com";
-
 const char *nombre_dispositivo = "wemo_riego_1";
-
 String nombre_estado = "Salida_1";
 String nombre_completo_salida[4] = {"Salida_1", "Salida_2", "Salida_3", "Salida_4"};
 String nombre_completo_salida_general = "Entrada_Configuracion";
@@ -56,7 +77,7 @@ String nombre_completo_entrada_configuracion = "Entrada_Configuracion";
 String nombre_completo_tiempo_inicio = "Salida_1";
 String nombre_completo_duracion[4] = {"Salida_1", "Salida_2", "Salida_3", "Salida_4"};
 String nombre_completo_ciclo = "Salida_1";
-
+String nombre_completo_stop ="Stop";
 boolean conf = false;
 
 // Valores funcionamiento normal wifi y mqtt
@@ -66,6 +87,76 @@ char msg[50];
 int value = 0;
 
 #include <servidor.txt>
+
+void proximoEstado() {
+  
+  switch (estado)
+        {
+            case Estados::Reposo:
+                if      (start[0]) {estado=Estados::Riego_1; primera_vez=true;}
+                else if (start[1]) {estado=Estados::Riego_2; primera_vez=true;}
+                else if (start[2]) {estado=Estados::Riego_3; primera_vez=true;}
+                else if (start[3]) {estado=Estados::Riego_4; primera_vez=true;}
+                else if (Ciclo>0) {estado=Estados::Esperando_inicio; primera_vez=true;}
+            break;
+            case Estados::Riego_1:
+                if (Tiempo_inicio>0) {estado=Estados::Esperando_inicio; primera_vez=true;}
+                else if (Ciclo>0) {estado=Estados::Esperando_ciclo; primera_vez=true;}
+                else {estado=Estados::Reposo; primera_vez=true;}
+            break;
+            case Estados::Riego_2:
+                if (Tiempo_inicio>0) {estado=Estados::Esperando_inicio; primera_vez=true;}
+                else if (Ciclo>0) {estado=Estados::Esperando_ciclo; primera_vez=true;}
+                else {estado=Estados::Reposo; primera_vez=true;}
+            break;
+            case Estados::Riego_3:
+                if (Tiempo_inicio>0) {estado=Estados::Esperando_inicio; primera_vez=true;}
+                else if (Ciclo>0) {estado=Estados::Esperando_ciclo; primera_vez=true;}
+                else {estado=Estados::Reposo; primera_vez=true;}
+            break;
+            case Estados::Riego_4:
+                if (Tiempo_inicio>0) {estado=Estados::Esperando_inicio; primera_vez=true;}
+                else if (Ciclo>0) {estado=Estados::Esperando_ciclo; primera_vez=true;}
+                else {estado=Estados::Reposo; primera_vez=true;}
+            break;
+            case Estados::Esperando_inicio:
+                if (Ciclo>0) {estado=Estados::Ciclo_riego_1; primera_vez=true;}
+                else {estado=Estados::Reposo; primera_vez=true;}
+            break;
+            case Estados::Ciclo_riego_1:
+                if (Ciclo>0) {
+                    if (stop) {estado=Estados::Esperando_ciclo; primera_vez=true;}
+                    else      {estado=Estados::Ciclo_riego_2; primera_vez=true;}
+                }
+                else {estado=Estados::Reposo; primera_vez=true;}
+            break;  
+            case Estados::Ciclo_riego_2:
+                if (Ciclo>0) {
+                    if (stop) {estado=Estados::Esperando_ciclo; primera_vez=true;}
+                    else      {estado=Estados::Ciclo_riego_3; primera_vez=true;}
+                }
+                else {estado=Estados::Reposo; primera_vez=true;}
+            break;  
+            case Estados::Ciclo_riego_3:
+                if (Ciclo>0) {
+                    if (stop) {estado=Estados::Esperando_ciclo; primera_vez=true;}
+                    else      {estado=Estados::Ciclo_riego_4; primera_vez=true;}
+                }
+                else {estado=Estados::Reposo; primera_vez=true;}
+            break;  
+            case Estados::Ciclo_riego_4:
+                if (Ciclo>0) {
+                    if (stop) {estado=Estados::Esperando_ciclo; primera_vez=true;}
+                    else      {estado=Estados::Esperando_ciclo; primera_vez=true;}
+                }
+                else {estado=Estados::Reposo; primera_vez=true;}
+            break;  
+            case Estados::Esperando_ciclo:
+                if (Ciclo>0) {estado=Estados::Ciclo_riego_1; primera_vez=true;}
+                else {estado=Estados::Reposo; primera_vez=true;}
+            break;
+        }
+}
 
 void notFound(AsyncWebServerRequest *request)
 {
@@ -253,16 +344,32 @@ void setup_wifi()
     Serial.println(WiFi.localIP());
 }
 
-void s1_on(int i)
+void Start(int salida)
 {
-
-    Start(i);
+    Serial.println("Cambiando " + nombre_completo_salida[salida] + " a: on");
+    digitalWrite(salida, HIGH);
+    s1ctext[salida] = "on";
+    client.publish(s1c[salida].c_str(), s1ctext[salida].c_str());
 }
 
-void s1_off(int i)
+void Stop(int salida)
 {
+    Serial.println("Cambiando " + nombre_completo_salida[salida] + " a: off");
+    digitalWrite(salida, LOW);
+    s1ctext[salida] = "off";
+    client.publish(s1c[salida].c_str(), s1ctext[salida].c_str());
+}
 
-    Stop(i);
+void s1_on(int i)
+{
+    start[i]=true;
+    proximoEstado();
+}
+
+void s1_off()
+{
+    stop=true;
+    proximoEstado();
 }
 
 void s2(String j, String tiempo)
@@ -281,14 +388,7 @@ void s3(String tiempo)
     Ciclo = ciclo * horas;
     Serial.println("Ciclo: " + Ciclo);
     writeFile(LittleFS, "/ciclo.txt", tiempo.c_str());
-    if (ciclo == 0)
-    {
-        Estado = 3;
-    }
-    else
-    {
-        Estado = 0;
-    }
+    proximoEstado();
 }
 
 void s4(String tiempo)
@@ -297,7 +397,8 @@ void s4(String tiempo)
     Tiempo_inicio = tiempo_inicio * minutos;
     Serial.println("Tiempo inicio: " + Tiempo_inicio);
     writeFile(LittleFS, "/tiempo_inicio.txt", tiempo.c_str());
-    Estado = 0;
+    temp_inicio = millis();
+    proximoEstado();
 }
 
 void callback(char *topic, byte *message, unsigned int length)
@@ -315,6 +416,11 @@ void callback(char *topic, byte *message, unsigned int length)
         mensaje += (char)message[i];
     }
 
+    if (String(topic) == nombre_completo_stop)
+    {
+        s1_off;
+    }
+    
     if (String(topic) == nombre_completo_salida[0])
     {
         if (mensaje == "on")
@@ -323,7 +429,7 @@ void callback(char *topic, byte *message, unsigned int length)
         }
         else if (mensaje == "off")
         {
-            s1_off(0);
+            s1_off;
         }
     }
 
@@ -335,7 +441,7 @@ void callback(char *topic, byte *message, unsigned int length)
         }
         else if (mensaje == "off")
         {
-            s1_off(1);
+            s1_off;
         }
     }
 
@@ -347,7 +453,7 @@ void callback(char *topic, byte *message, unsigned int length)
         }
         else if (mensaje == "off")
         {
-            s1_off(2);
+            s1_off;
         }
     }
 
@@ -359,19 +465,7 @@ void callback(char *topic, byte *message, unsigned int length)
         }
         else if (mensaje == "off")
         {
-            s1_off(3);
-        }
-    }
-
-    if (String(topic) == nombre_completo_salida_general)
-    {
-        if (mensaje == "on")
-        {
-            general = true;
-        }
-        else if (mensaje == "off")
-        {
-            general = false;
+            s1_off;
         }
     }
 
@@ -521,9 +615,11 @@ void setup()
 
     Serial.begin(115200);
 
-    pinMode(Entrada_configuracion, INPUT);
+    pinMode(Entrada_configuracion, INPUT_PULLUP);
 
     Valor_entrada_configuracion = digitalRead(Entrada_configuracion);
+    Serial.print("Estado configuracion: ");
+    Serial.print(Valor_entrada_configuracion);
 
     // Initialize LittleFS
     if (!LittleFS.begin())
@@ -559,7 +655,7 @@ void setup()
         String passworda = readFile(LittleFS, "/inputpassword.txt");
         ssid = ssida.c_str();
         password = passworda.c_str();
-        setup_wifi();
+        estado=Estados::Configuracion;
         servidorhttp();
     }
 
@@ -571,19 +667,9 @@ void setup()
         String puerto_MQTTa = readFile(LittleFS, "/puerto_MQTT.txt");
         String dispositivoa = readFile(LittleFS, "/dispositivo.txt");
         String tiempo_inicioa = readFile(LittleFS, "/tiempo_inicio.txt");
-        String generala = readFile(LittleFS, "/general.txt");
         String duraciona[4] = {"a", "d", "d", "f"};
 
-        if (generala == "1")
-        {
-            general = true;
-        }
-        else
-        {
-            general = false;
-        }
-
-        for (int i = 0; i <= 3; i++)
+           for (int i = 0; i <= 3; i++)
         {
             String nombre = "/duracion_" + String(i) + ".txt";
             duraciona[i] = readFile(LittleFS, nombre.c_str());
@@ -601,15 +687,6 @@ void setup()
         Ciclo = atol(cicloa.c_str());
         Tiempo_inicio = Tiempo_inicio * minutos;
         Ciclo = Ciclo * horas;
-
-        if (Ciclo == 0)
-        {
-            Estado = 3;
-        }
-        else
-        {
-            Estado = 0;
-        }
         ssid = ssida.c_str();
         password = passworda.c_str();
         int str_len = servidor_MQTTa.length() + 1;
@@ -638,22 +715,71 @@ void setup()
         nombre_completo_salida_general = String(nombre_dispositivo) + "/" + "general";
         nombre_completo_tiempo_inicio = String(nombre_dispositivo) + "/" + "tiempo_inicio";
         nombre_completo_ciclo = String(nombre_dispositivo) + "/" + "ciclo";
+        nombre_completo_stop = String(nombre_dispositivo) + "/" + "stop";
 
         client.setServer(nmqtt, numero_puerto_MQTT);
         client.setCallback(callback);
 
         pinMode(Entrada_configuracion, INPUT_PULLUP);
 
-        tempinicio = millis();
+        temp_inicio = millis();
 
         servidorhttp();
+        proximoEstado();
     }
+}
+
+void comms()
+{
+    temp_comms = now;
+
+    for (int i = 0; i <= 3; i++)
+    {
+        Serial.println(nombre_completo_duracion[i]);
+        Serial.println(Duracion[i]);
+    }
+    Serial.println("Inicio Reporte");
+    Serial.println(estado);
+    Serial.println(nombre_estado);
+    Serial.println(nombre_completo_salida_general);
+    Serial.println(nombre_completo_ciclo);
+    Serial.println(Ciclo);
+    Serial.println(nombre_completo_tiempo_inicio);
+    Serial.println(Tiempo_inicio);
+
+    unsigned long t1 = Tiempo_inicio / minutos;
+    unsigned long t2[4] = {};
+    unsigned long t3 = Ciclo / horas;
+    String c[4] = {};
+    String sa = nombre_estado + "c";
+    String sc[4] = {};
+
+    for (int i = 0; i <= 3; i++)
+    {
+        t2[i] = Duracion[i] / minutos;
+        c[i] = (String)t2[i];
+        sc[i] = nombre_completo_duracion[i] + "c";
+    }
+    String a = (String)estado;
+    String b = (String)t1;
+    String d = (String)t3;
+
+    String sb = nombre_completo_tiempo_inicio + "c";
+    String sd = nombre_completo_ciclo + "c";
+
+    for (int i = 0; i <= 3; i++)
+    {
+        client.publish(sc[i].c_str(), c[i].c_str());        // Actualiza duración salidas
+        client.publish(s1c[i].c_str(), s1ctext[i].c_str()); // Actualiza estado salidas
+    }
+
+    client.publish(sa.c_str(), a.c_str());
+    client.publish(sb.c_str(), b.c_str());
+    client.publish(sd.c_str(), d.c_str());
 }
 
 void loop()
 {
-    boolean estado_loop = false;
-    boolean stop_loop = false;
     Valor_entrada_configuracion = digitalRead(Entrada_configuracion);
 
     if (Valor_entrada_configuracion == true)
@@ -663,152 +789,328 @@ void loop()
     }
     else
     {
-
         if (!client.connected())
         {
             reconnect();
         }
         client.loop();
 
-        unsigned long now = millis();
+        now = millis();
 
-        if (now - temppruebas > 120000)
+        if (now - temp_comms > 10000) // Lazo envío estado
         {
-            temppruebas = now;
-
-            for (int i = 0; i <= 3; i++)
-            {
-                Serial.println(nombre_completo_duracion[i]);
-                Serial.println(Duracion[i]);
-            }
-            Serial.println(Estado);
-            Serial.println(nombre_estado);
-            Serial.println(nombre_completo_salida_general);
-            Serial.println(nombre_completo_ciclo);
-            Serial.println(Ciclo);
-            Serial.println(nombre_completo_tiempo_inicio);
-            Serial.println(Tiempo_inicio);
-
-            unsigned long t1 = Tiempo_inicio / minutos;
-            unsigned long t2[4] = {};
-            unsigned long t3 = Ciclo / horas;
-            String a = "";
-            String c[4] = {};
-            String sa = "";
-            String sc[4] = {};
-
-            for (int i = 0; i <= 3; i++)
-            {
-                t2[i] = Duracion[i] / minutos;
-                c[i] = (String)t2[i];
-                String sc[i] = nombre_completo_duracion[i] + "c";
-            }
-            a = (String)Estado;
-            String b = (String)t1;
-            String d = (String)t3;
-            String sa = nombre_estado;
-
-            String sb = nombre_completo_tiempo_inicio + "c";
-            String sd = nombre_completo_ciclo + "c";
-
-            for (int i = 0; i <= 3; i++)
-            {
-                client.publish(sc[i].c_str(), c[i].c_str());
-                client.publish(s1c[i].c_str(), s1ctext[i].c_str());
-            }
-
-            client.publish(sa.c_str(), a.c_str());
-            client.publish(sb.c_str(), b.c_str());
-            client.publish(sd.c_str(), d.c_str());
+            comms();
         }
 
-        switch (Estado)
+        switch (estado)
         {
-        case 0:
-            if (now - tempinicio > Tiempo_inicio)
-            {
-                estado_loop = true;
-                riego_activo = 0;
-                start[riego_activo] = true;
-            }
-
-            break;
-        case 1:
-            if (now - tempfin > Duracion[riego_activo])
-            {
-                stop[riego_activo] = true;
-                riego_activo = riego_activo + 1;
-                if (riego_activo == 4)
+            case Estados::Reposo:
+                if (primera_vez)
                 {
-                    estado_loop = false;
-                    if (Estado != 3)
-                    {
-                        Estado = 2;
-                    }
+                    //Estado
+                    digitalWrite(Salida[0], LOW);
+                    digitalWrite(Salida[1], LOW);
+                    digitalWrite(Salida[2], LOW);
+                    digitalWrite(Salida[3], LOW);
+                    primera_vez=false;
+                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: off");
+                    s1ctext[0] = "off";
+                    s1ctext[1] = "off";
+                    s1ctext[2] = "off";
+                    s1ctext[3] = "off";
+                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
+                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
+                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
+                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                
                 }
-                else
+                //Cambio por tiempo
+                
+                break;
+
+            case Estados::Riego_1:
+                if (primera_vez)
                 {
-                    start[riego_activo] = true;
+                    //Estado
+                    digitalWrite(Salida[0], HIGH);
+                    digitalWrite(Salida[1], LOW);
+                    digitalWrite(Salida[2], LOW);
+                    digitalWrite(Salida[3], LOW);
+                    primera_vez=false;
+                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: on");
+                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: off");
+                    s1ctext[0] = "on";
+                    s1ctext[1] = "off";
+                    s1ctext[2] = "off";
+                    s1ctext[3] = "off";
+                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
+                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
+                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
+                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
+                //Cambio por tiempo
+                if (now - temp_estado > Duracion[0]) { 
+                    temp_estado=now;
+                    proximoEstado(); 
                 }
-            }
-            break;
-        case 2:
-            if (now - tempciclo > Ciclo)
-            {
-                estado_loop = true;
-                riego_activo = 0;
-                start[riego_activo] = true;
-            }
-            break;
-        case 3:
-            break;
-        }
 
-        if (estado_loop && start[riego_activo])
-        {
-            tempfin = now;
+                break;
 
-            start[riego_activo] = false;
+            case Estados::Riego_2:
+                if (primera_vez)
+                {                
+                    //Estado
+                    digitalWrite(Salida[0], LOW);
+                    digitalWrite(Salida[1], HIGH);
+                    digitalWrite(Salida[2], LOW);
+                    digitalWrite(Salida[3], LOW);
+                    primera_vez=false;
+                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: on");
+                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: off");
+                    s1ctext[0] = "off";
+                    s1ctext[1] = "on";
+                    s1ctext[2] = "off";
+                    s1ctext[3] = "off";
+                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
+                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
+                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
+                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
+                //Cambio por tiempo
+                if (now - temp_estado > Duracion[1]) { 
+                    temp_estado=now;
+                    proximoEstado(); 
+                }                
+                break;
 
-            if (Estado != 3)
-            {
-                Estado = 1;
-            }
+            case Estados::Riego_3:
+                if (primera_vez)
+                {
+                    //Estado
+                    digitalWrite(Salida[0], LOW);
+                    digitalWrite(Salida[1], LOW);
+                    digitalWrite(Salida[2], HIGH);
+                    digitalWrite(Salida[3], LOW);
+                    primera_vez=false;
+                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: on");
+                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: off");
+                    s1ctext[0] = "off";
+                    s1ctext[1] = "off";
+                    s1ctext[2] = "on";
+                    s1ctext[3] = "off";
+                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
+                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
+                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
+                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
+                //Cambio por tiempo
+                if (now - temp_estado > Duracion[2]) { 
+                    temp_estado=now;
+                    proximoEstado(); 
+                }                
+                break;
 
-            Serial.println("Cambiando " + nombre_completo_salida[riego_activo] + " a: on");
-            digitalWrite(riego_activo, HIGH);
-            s1ctext[riego_activo] = "on";
-            client.publish(s1c[riego_activo].c_str(), s1ctext[riego_activo].c_str());
+            case Estados::Riego_4:
+                if (primera_vez)
+                {                
+                    //Estado
+                    digitalWrite(Salida[0], LOW);
+                    digitalWrite(Salida[1], LOW);
+                    digitalWrite(Salida[2], LOW);
+                    digitalWrite(Salida[3], HIGH);
+                    primera_vez=false;
+                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: on");
+                    s1ctext[0] = "off";
+                    s1ctext[1] = "off";
+                    s1ctext[2] = "off";
+                    s1ctext[3] = "on";
+                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
+                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
+                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
+                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
+                //Cambio por tiempo
+                if (now - temp_estado > Duracion[3]) { 
+                    temp_estado=now;
+                    proximoEstado(); 
+                }                
+                break;
 
-            if (riego_activo == 0)
-            {
-                tempciclo = now;
-            }
-        }
+            case Estados::Esperando_inicio:
+                if (primera_vez)
+                {                
+                    //Estado
+                    digitalWrite(Salida[0], LOW);
+                    digitalWrite(Salida[1], LOW);
+                    digitalWrite(Salida[2], LOW);
+                    digitalWrite(Salida[3], LOW);
+                    primera_vez=false;
+                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: off");
+                    s1ctext[0] = "off";
+                    s1ctext[1] = "off";
+                    s1ctext[2] = "off";
+                    s1ctext[3] = "off";
+                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
+                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
+                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
+                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
+                //Cambio por tiempo
+                if (now - temp_inicio > Tiempo_inicio) { 
+                    temp_estado=now;
+                    proximoEstado(); 
+                }                
+                break;
 
-        if (stop[riego_activo])
-        {
-            stop[riego_activo] = false;
-            Serial.println("Cambiando " + nombre_completo_salida[riego_activo] + " a: off");
-            digitalWrite(riego_activo, LOW);
-            s1ctext[riego_activo] = "off";
-            client.publish(s1c[riego_activo].c_str(), s1ctext[riego_activo].c_str());
+            case Estados::Esperando_ciclo:
+                if (primera_vez)
+                {                
+                    //Estado
+                    digitalWrite(Salida[0], LOW);
+                    digitalWrite(Salida[1], LOW);
+                    digitalWrite(Salida[2], LOW);
+                    digitalWrite(Salida[3], LOW);
+                    primera_vez=false;
+                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: off");
+                    s1ctext[0] = "off";
+                    s1ctext[1] = "off";
+                    s1ctext[2] = "off";
+                    s1ctext[3] = "off";
+                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
+                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
+                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
+                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
+                //Cambio por tiempo
+                if (now - temp_ciclo > Ciclo) { 
+                    temp_estado=now;
+                    temp_ciclo=now;
+                    proximoEstado(); 
+                }                   
+                break;
+
+            case Estados::Ciclo_riego_1:
+                if (primera_vez)
+                {                
+                    //Estado
+                    digitalWrite(Salida[0], HIGH);
+                    digitalWrite(Salida[1], LOW);
+                    digitalWrite(Salida[2], LOW);
+                    digitalWrite(Salida[3], LOW);
+                    primera_vez=false;
+                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: on");
+                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: off");
+                    s1ctext[0] = "on";
+                    s1ctext[1] = "off";
+                    s1ctext[2] = "off";
+                    s1ctext[3] = "off";
+                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
+                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
+                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
+                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
+                //Cambio por tiempo
+                if (now - temp_estado > Duracion[0]) { 
+                    temp_estado=now;
+                    proximoEstado(); 
+                }                
+                break;
+
+            case Estados::Ciclo_riego_2:
+                if (primera_vez)
+                {                
+                    //Estado
+                    digitalWrite(Salida[0], LOW);
+                    digitalWrite(Salida[1], HIGH);
+                    digitalWrite(Salida[2], LOW);
+                    digitalWrite(Salida[3], LOW);
+                    primera_vez=false;
+                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: on");
+                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: off");
+                    s1ctext[0] = "on";
+                    s1ctext[1] = "off";
+                    s1ctext[2] = "off";
+                    s1ctext[3] = "off";
+                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
+                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
+                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
+                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
+                //Cambio por tiempo
+                if (now - temp_estado > Duracion[1]) { 
+                    temp_estado=now;
+                    proximoEstado(); 
+                }                 
+                break;
+
+            case Estados::Ciclo_riego_3:
+                if (primera_vez)
+                {                
+                    //Estado
+                    digitalWrite(Salida[0], LOW);
+                    digitalWrite(Salida[1], LOW);
+                    digitalWrite(Salida[2], HIGH);
+                    digitalWrite(Salida[3], LOW);
+                    primera_vez=false;
+                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: on");
+                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: off");
+                    s1ctext[0] = "on";
+                    s1ctext[1] = "off";
+                    s1ctext[2] = "off";
+                    s1ctext[3] = "off";
+                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
+                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
+                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
+                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
+                //Cambio por tiempo
+                if (now - temp_estado > Duracion[2]) { 
+                    temp_estado=now;
+                    proximoEstado(); 
+                }                 
+                break;
+    
+            case Estados::Ciclo_riego_4:
+                if (primera_vez)
+                {                
+                    //Estado
+                    digitalWrite(Salida[0], LOW);
+                    digitalWrite(Salida[1], LOW);
+                    digitalWrite(Salida[2], LOW);
+                    digitalWrite(Salida[3], HIGH);
+                    primera_vez=false;
+                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: off");
+                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: on");
+                    s1ctext[0] = "off";
+                    s1ctext[1] = "off";
+                    s1ctext[2] = "off";
+                    s1ctext[3] = "on";
+                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
+                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
+                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
+                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
+                //Cambio por tiempo
+                if (now - temp_estado > Duracion[3]) { 
+                    temp_estado=now;
+                    proximoEstado(); 
+                }             
+                break;
         }
     }
-}
-
-void Start(int salida)
-{
-    Serial.println("Cambiando " + nombre_completo_salida[salida] + " a: on");
-    digitalWrite(salida, HIGH);
-    s1ctext[salida] = "on";
-    client.publish(s1c[salida].c_str(), s1ctext[salida].c_str());
-}
-
-void Stop(int salida)
-{
-    Serial.println("Cambiando " + nombre_completo_salida[salida] + " a: off");
-    digitalWrite(salida, LOW);
-    s1ctext[salida] = "off";
-    client.publish(s1c[salida].c_str(), s1ctext[salida].c_str());
 }
