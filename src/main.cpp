@@ -88,74 +88,77 @@ int value = 0;
 
 #include <servidor.txt>
 
-void proximoEstado() {
+void proximoEstado() 
+{
   
-  switch (estado)
-        {
-            case Estados::Reposo:
-                if      (start[0]) {estado=Estados::Riego_1; primera_vez=true;}
-                else if (start[1]) {estado=Estados::Riego_2; primera_vez=true;}
-                else if (start[2]) {estado=Estados::Riego_3; primera_vez=true;}
-                else if (start[3]) {estado=Estados::Riego_4; primera_vez=true;}
-                else if (Ciclo>0) {estado=Estados::Esperando_inicio; primera_vez=true;}
-            break;
-            case Estados::Riego_1:
-                if (Tiempo_inicio>0) {estado=Estados::Esperando_inicio; primera_vez=true;}
-                else if (Ciclo>0) {estado=Estados::Esperando_ciclo; primera_vez=true;}
-                else {estado=Estados::Reposo; primera_vez=true;}
-            break;
-            case Estados::Riego_2:
-                if (Tiempo_inicio>0) {estado=Estados::Esperando_inicio; primera_vez=true;}
-                else if (Ciclo>0) {estado=Estados::Esperando_ciclo; primera_vez=true;}
-                else {estado=Estados::Reposo; primera_vez=true;}
-            break;
-            case Estados::Riego_3:
-                if (Tiempo_inicio>0) {estado=Estados::Esperando_inicio; primera_vez=true;}
-                else if (Ciclo>0) {estado=Estados::Esperando_ciclo; primera_vez=true;}
-                else {estado=Estados::Reposo; primera_vez=true;}
-            break;
-            case Estados::Riego_4:
-                if (Tiempo_inicio>0) {estado=Estados::Esperando_inicio; primera_vez=true;}
-                else if (Ciclo>0) {estado=Estados::Esperando_ciclo; primera_vez=true;}
-                else {estado=Estados::Reposo; primera_vez=true;}
-            break;
-            case Estados::Esperando_inicio:
-                if (Ciclo>0) {estado=Estados::Ciclo_riego_1; primera_vez=true;}
-                else {estado=Estados::Reposo; primera_vez=true;}
-            break;
-            case Estados::Ciclo_riego_1:
-                if (Ciclo>0) {
-                    if (stop) {estado=Estados::Esperando_ciclo; primera_vez=true;}
-                    else      {estado=Estados::Ciclo_riego_2; primera_vez=true;}
-                }
-                else {estado=Estados::Reposo; primera_vez=true;}
-            break;  
-            case Estados::Ciclo_riego_2:
-                if (Ciclo>0) {
-                    if (stop) {estado=Estados::Esperando_ciclo; primera_vez=true;}
-                    else      {estado=Estados::Ciclo_riego_3; primera_vez=true;}
-                }
-                else {estado=Estados::Reposo; primera_vez=true;}
-            break;  
-            case Estados::Ciclo_riego_3:
-                if (Ciclo>0) {
-                    if (stop) {estado=Estados::Esperando_ciclo; primera_vez=true;}
-                    else      {estado=Estados::Ciclo_riego_4; primera_vez=true;}
-                }
-                else {estado=Estados::Reposo; primera_vez=true;}
-            break;  
-            case Estados::Ciclo_riego_4:
-                if (Ciclo>0) {
-                    if (stop) {estado=Estados::Esperando_ciclo; primera_vez=true;}
-                    else      {estado=Estados::Esperando_ciclo; primera_vez=true;}
-                }
-                else {estado=Estados::Reposo; primera_vez=true;}
-            break;  
-            case Estados::Esperando_ciclo:
-                if (Ciclo>0) {estado=Estados::Ciclo_riego_1; primera_vez=true;}
-                else {estado=Estados::Reposo; primera_vez=true;}
-            break;
+  switch (estado) {
+    case Estados::Reposo:
+        if      (start[0]) {estado=Estados::Riego_1; primera_vez=true;}
+        else if (start[1]) {estado=Estados::Riego_2; primera_vez=true;}
+        else if (start[2]) {estado=Estados::Riego_3; primera_vez=true;}
+        else if (start[3]) {estado=Estados::Riego_4; primera_vez=true;}
+        else if (Ciclo>0) {estado=Estados::Esperando_inicio; primera_vez=true;}
+    break;
+    case Estados::Riego_1:
+        if (Tiempo_inicio>0) {estado=Estados::Esperando_inicio; primera_vez=true;}
+        else if (Ciclo>0) {estado=Estados::Esperando_ciclo; primera_vez=true;}
+        else {estado=Estados::Reposo; primera_vez=true;}
+    break;
+    case Estados::Riego_2:
+        if (Tiempo_inicio>0) {estado=Estados::Esperando_inicio; primera_vez=true;}
+        else if (Ciclo>0) {estado=Estados::Esperando_ciclo; primera_vez=true;}
+        else {estado=Estados::Reposo; primera_vez=true;}
+    break;
+    case Estados::Riego_3:
+        if (Tiempo_inicio>0) {estado=Estados::Esperando_inicio; primera_vez=true;}
+        else if (Ciclo>0) {estado=Estados::Esperando_ciclo; primera_vez=true;}
+        else {estado=Estados::Reposo; primera_vez=true;}
+    break;
+    case Estados::Riego_4:
+        if (Tiempo_inicio>0) {estado=Estados::Esperando_inicio; primera_vez=true;}
+        else if (Ciclo>0) {estado=Estados::Esperando_ciclo; primera_vez=true;}
+        else {estado=Estados::Reposo; primera_vez=true;}
+    break;
+    case Estados::Esperando_inicio:
+        if (Ciclo>0) {estado=Estados::Ciclo_riego_1; primera_vez=true;}
+        else {estado=Estados::Reposo; primera_vez=true;}
+    break;
+    case Estados::Ciclo_riego_1:
+        if (Ciclo>0) {
+            if (stop) {estado=Estados::Esperando_ciclo; primera_vez=true;}
+            else      {estado=Estados::Ciclo_riego_2; primera_vez=true;}
         }
+        else {estado=Estados::Reposo; primera_vez=true;}
+    break;  
+    case Estados::Ciclo_riego_2:
+        if (Ciclo>0) {
+            if (stop) {estado=Estados::Esperando_ciclo; primera_vez=true;}
+            else      {estado=Estados::Ciclo_riego_3; primera_vez=true;}
+        }
+        else {estado=Estados::Reposo; primera_vez=true;}
+    break;  
+    case Estados::Ciclo_riego_3:
+        if (Ciclo>0) {
+            if (stop) {estado=Estados::Esperando_ciclo; primera_vez=true;}
+            else      {estado=Estados::Ciclo_riego_4; primera_vez=true;}
+        }
+        else {estado=Estados::Reposo; primera_vez=true;}
+    break;  
+    case Estados::Ciclo_riego_4:
+        if (Ciclo>0) {
+            if (stop) {estado=Estados::Esperando_ciclo; primera_vez=true;}
+            else      {estado=Estados::Esperando_ciclo; primera_vez=true;}
+        }
+        else {estado=Estados::Reposo; primera_vez=true;}
+    break;  
+    case Estados::Esperando_ciclo:
+        if (Ciclo>0) {estado=Estados::Ciclo_riego_1; primera_vez=true;}
+        else {estado=Estados::Reposo; primera_vez=true;}
+    break;
+    case Estados::Configuracion:
+
+    break;            
+    }
 }
 
 void notFound(AsyncWebServerRequest *request)
@@ -344,22 +347,6 @@ void setup_wifi()
     Serial.println(WiFi.localIP());
 }
 
-void Start(int salida)
-{
-    Serial.println("Cambiando " + nombre_completo_salida[salida] + " a: on");
-    digitalWrite(salida, HIGH);
-    s1ctext[salida] = "on";
-    client.publish(s1c[salida].c_str(), s1ctext[salida].c_str());
-}
-
-void Stop(int salida)
-{
-    Serial.println("Cambiando " + nombre_completo_salida[salida] + " a: off");
-    digitalWrite(salida, LOW);
-    s1ctext[salida] = "off";
-    client.publish(s1c[salida].c_str(), s1ctext[salida].c_str());
-}
-
 void s1_on(int i)
 {
     start[i]=true;
@@ -418,7 +405,7 @@ void callback(char *topic, byte *message, unsigned int length)
 
     if (String(topic) == nombre_completo_stop)
     {
-        s1_off;
+        s1_off();
     }
     
     if (String(topic) == nombre_completo_salida[0])
@@ -429,7 +416,7 @@ void callback(char *topic, byte *message, unsigned int length)
         }
         else if (mensaje == "off")
         {
-            s1_off;
+            s1_off();
         }
     }
 
@@ -441,7 +428,7 @@ void callback(char *topic, byte *message, unsigned int length)
         }
         else if (mensaje == "off")
         {
-            s1_off;
+            s1_off();
         }
     }
 
@@ -453,7 +440,7 @@ void callback(char *topic, byte *message, unsigned int length)
         }
         else if (mensaje == "off")
         {
-            s1_off;
+            s1_off();
         }
     }
 
@@ -465,7 +452,7 @@ void callback(char *topic, byte *message, unsigned int length)
         }
         else if (mensaje == "off")
         {
-            s1_off;
+            s1_off();
         }
     }
 
@@ -833,6 +820,7 @@ void loop()
             case Estados::Riego_1:
                 if (primera_vez)
                 {
+                    temp_estado=now;
                     //Estado
                     digitalWrite(Salida[0], HIGH);
                     digitalWrite(Salida[1], LOW);
@@ -853,7 +841,6 @@ void loop()
                     client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[0]) { 
-                    temp_estado=now;
                     proximoEstado(); 
                 }
 
@@ -862,6 +849,7 @@ void loop()
             case Estados::Riego_2:
                 if (primera_vez)
                 {                
+                    temp_estado=now;
                     //Estado
                     digitalWrite(Salida[0], LOW);
                     digitalWrite(Salida[1], HIGH);
@@ -882,7 +870,6 @@ void loop()
                     client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[1]) { 
-                    temp_estado=now;
                     proximoEstado(); 
                 }                
                 break;
@@ -890,6 +877,7 @@ void loop()
             case Estados::Riego_3:
                 if (primera_vez)
                 {
+                    temp_estado=now;
                     //Estado
                     digitalWrite(Salida[0], LOW);
                     digitalWrite(Salida[1], LOW);
@@ -910,7 +898,6 @@ void loop()
                     client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[2]) { 
-                    temp_estado=now;
                     proximoEstado(); 
                 }                
                 break;
@@ -918,6 +905,7 @@ void loop()
             case Estados::Riego_4:
                 if (primera_vez)
                 {                
+                    temp_estado=now;
                     //Estado
                     digitalWrite(Salida[0], LOW);
                     digitalWrite(Salida[1], LOW);
@@ -938,7 +926,6 @@ void loop()
                     client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[3]) { 
-                    temp_estado=now;
                     proximoEstado(); 
                 }                
                 break;
@@ -946,6 +933,7 @@ void loop()
             case Estados::Esperando_inicio:
                 if (primera_vez)
                 {                
+                    temp_estado=now;
                     //Estado
                     digitalWrite(Salida[0], LOW);
                     digitalWrite(Salida[1], LOW);
@@ -965,8 +953,7 @@ void loop()
                     client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
                     client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
                 //Cambio por tiempo
-                if (now - temp_inicio > Tiempo_inicio) { 
-                    temp_estado=now;
+                if (now - temp_estado > Tiempo_inicio) { 
                     proximoEstado(); 
                 }                
                 break;
@@ -994,8 +981,6 @@ void loop()
                     client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
                 //Cambio por tiempo
                 if (now - temp_ciclo > Ciclo) { 
-                    temp_estado=now;
-                    temp_ciclo=now;
                     proximoEstado(); 
                 }                   
                 break;
@@ -1003,6 +988,8 @@ void loop()
             case Estados::Ciclo_riego_1:
                 if (primera_vez)
                 {                
+                    temp_estado=now;
+                    temp_ciclo=now;
                     //Estado
                     digitalWrite(Salida[0], HIGH);
                     digitalWrite(Salida[1], LOW);
@@ -1023,7 +1010,6 @@ void loop()
                     client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[0]) { 
-                    temp_estado=now;
                     proximoEstado(); 
                 }                
                 break;
@@ -1031,6 +1017,7 @@ void loop()
             case Estados::Ciclo_riego_2:
                 if (primera_vez)
                 {                
+                    temp_estado=now;
                     //Estado
                     digitalWrite(Salida[0], LOW);
                     digitalWrite(Salida[1], HIGH);
@@ -1051,7 +1038,6 @@ void loop()
                     client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[1]) { 
-                    temp_estado=now;
                     proximoEstado(); 
                 }                 
                 break;
@@ -1059,6 +1045,7 @@ void loop()
             case Estados::Ciclo_riego_3:
                 if (primera_vez)
                 {                
+                    temp_estado=now;
                     //Estado
                     digitalWrite(Salida[0], LOW);
                     digitalWrite(Salida[1], LOW);
@@ -1079,7 +1066,6 @@ void loop()
                     client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[2]) { 
-                    temp_estado=now;
                     proximoEstado(); 
                 }                 
                 break;
@@ -1087,6 +1073,7 @@ void loop()
             case Estados::Ciclo_riego_4:
                 if (primera_vez)
                 {                
+                    temp_estado=now;
                     //Estado
                     digitalWrite(Salida[0], LOW);
                     digitalWrite(Salida[1], LOW);
@@ -1107,10 +1094,14 @@ void loop()
                     client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[3]) { 
-                    temp_estado=now;
                     proximoEstado(); 
                 }             
                 break;
+                
+                case Estados::Configuracion:
+                
+                break;
+
         }
     }
 }
