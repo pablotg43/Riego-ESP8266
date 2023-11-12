@@ -61,6 +61,7 @@ unsigned long Ciclo = 0;                  // horas entre inicios
 //Ordenes
 boolean start[4] = {false, false, false, false};
 boolean stop = false;
+boolean start_ciclo = false;
 boolean primera_vez=false;
 //Varios
 String s1c[4] = {"s1", "s2", "s3", "s4"};
@@ -72,7 +73,7 @@ const char *nmqtt = "ptg43.mooo.com";
 const char *nombre_dispositivo = "wemo_riego_1";
 String nombre_estado = "Salida_1";
 String nombre_completo_salida[4] = {"Salida_1", "Salida_2", "Salida_3", "Salida_4"};
-String nombre_completo_salida_general = "Entrada_Configuracion";
+String nombre_completo_start = "Entrada_Configuracion";
 String nombre_completo_entrada_configuracion = "Entrada_Configuracion";
 String nombre_completo_tiempo_inicio = "Salida_1";
 String nombre_completo_duracion[4] = {"Salida_1", "Salida_2", "Salida_3", "Salida_4"};
@@ -93,66 +94,81 @@ void proximoEstado()
   
   switch (estado) {
     case Estados::Reposo:
-        if      (start[0]) {estado=Estados::Riego_1; primera_vez=true;}
-        else if (start[1]) {estado=Estados::Riego_2; primera_vez=true;}
-        else if (start[2]) {estado=Estados::Riego_3; primera_vez=true;}
-        else if (start[3]) {estado=Estados::Riego_4; primera_vez=true;}
+        if      (start[0]) {estado=Estados::Riego_1; primera_vez=true;start[0]=false;}
+        else if (start[1]) {estado=Estados::Riego_2; primera_vez=true;start[1]=false;}
+        else if (start[2]) {estado=Estados::Riego_3; primera_vez=true;start[2]=false;}
+        else if (start[3]) {estado=Estados::Riego_4; primera_vez=true;start[3]=false;}
+        else if (stop) {estado=Estados::Reposo; stop=false;}
+        else if (start_ciclo) {estado=Estados::Ciclo_riego_1; primera_vez=true;}
         else if (Ciclo>0) {estado=Estados::Esperando_inicio; primera_vez=true;}
     break;
     case Estados::Riego_1:
-        if (Tiempo_inicio>0) {estado=Estados::Esperando_inicio; primera_vez=true;}
-        else if (Ciclo>0) {estado=Estados::Esperando_ciclo; primera_vez=true;}
-        else {estado=Estados::Reposo; primera_vez=true;}
+        if (Ciclo>0) {estado=Estados::Esperando_ciclo; primera_vez=true;stop=false;}
+        else {estado=Estados::Reposo; primera_vez=true;stop=false;}
     break;
     case Estados::Riego_2:
-        if (Tiempo_inicio>0) {estado=Estados::Esperando_inicio; primera_vez=true;}
-        else if (Ciclo>0) {estado=Estados::Esperando_ciclo; primera_vez=true;}
-        else {estado=Estados::Reposo; primera_vez=true;}
+        if (Ciclo>0) {estado=Estados::Esperando_ciclo; primera_vez=true;stop=false;}
+        else {estado=Estados::Reposo; primera_vez=true;stop=false;}
     break;
     case Estados::Riego_3:
-        if (Tiempo_inicio>0) {estado=Estados::Esperando_inicio; primera_vez=true;}
-        else if (Ciclo>0) {estado=Estados::Esperando_ciclo; primera_vez=true;}
-        else {estado=Estados::Reposo; primera_vez=true;}
+        if (Ciclo>0) {estado=Estados::Esperando_ciclo; primera_vez=true;stop=false;}
+        else {estado=Estados::Reposo; primera_vez=true;stop=false;}
     break;
     case Estados::Riego_4:
-        if (Tiempo_inicio>0) {estado=Estados::Esperando_inicio; primera_vez=true;}
-        else if (Ciclo>0) {estado=Estados::Esperando_ciclo; primera_vez=true;}
-        else {estado=Estados::Reposo; primera_vez=true;}
+        if (Ciclo>0) {estado=Estados::Esperando_ciclo; primera_vez=true;stop=false;}
+        else {estado=Estados::Reposo; primera_vez=true;stop=false;}
     break;
     case Estados::Esperando_inicio:
-        if (Ciclo>0) {estado=Estados::Ciclo_riego_1; primera_vez=true;}
+        if      (start[0]) {estado=Estados::Riego_1; primera_vez=true;start[0]=false;}
+        else if (start[1]) {estado=Estados::Riego_2; primera_vez=true;start[1]=false;}
+        else if (start[2]) {estado=Estados::Riego_3; primera_vez=true;start[2]=false;}
+        else if (start[3]) {estado=Estados::Riego_4; primera_vez=true;start[3]=false;}
+        else if (stop) {estado=Estados::Esperando_inicio; stop=false;}
+        else if (start_ciclo) {estado=Estados::Ciclo_riego_1; primera_vez=true;}
+        else if (Ciclo>0) {estado=Estados::Ciclo_riego_1; primera_vez=true;}
         else {estado=Estados::Reposo; primera_vez=true;}
     break;
     case Estados::Ciclo_riego_1:
-        if (Ciclo>0) {
-            if (stop) {estado=Estados::Esperando_ciclo; primera_vez=true;}
+        if (start_ciclo) {estado=Estados::Ciclo_riego_2; primera_vez=true;}
+        else if (Ciclo>0) {
+            if (stop) {estado=Estados::Esperando_ciclo; primera_vez=true;stop=false;}
             else      {estado=Estados::Ciclo_riego_2; primera_vez=true;}
         }
         else {estado=Estados::Reposo; primera_vez=true;}
     break;  
     case Estados::Ciclo_riego_2:
-        if (Ciclo>0) {
-            if (stop) {estado=Estados::Esperando_ciclo; primera_vez=true;}
+        if (start_ciclo) {estado=Estados::Ciclo_riego_3; primera_vez=true;}
+        else if (Ciclo>0) {
+            if (stop) {estado=Estados::Esperando_ciclo; primera_vez=true;stop=false;}
             else      {estado=Estados::Ciclo_riego_3; primera_vez=true;}
         }
         else {estado=Estados::Reposo; primera_vez=true;}
     break;  
     case Estados::Ciclo_riego_3:
-        if (Ciclo>0) {
-            if (stop) {estado=Estados::Esperando_ciclo; primera_vez=true;}
+        if (start_ciclo) {estado=Estados::Ciclo_riego_4; primera_vez=true;}
+        else if (Ciclo>0) {
+            if (stop) {estado=Estados::Esperando_ciclo; primera_vez=true;stop=false;}
             else      {estado=Estados::Ciclo_riego_4; primera_vez=true;}
         }
         else {estado=Estados::Reposo; primera_vez=true;}
     break;  
     case Estados::Ciclo_riego_4:
-        if (Ciclo>0) {
-            if (stop) {estado=Estados::Esperando_ciclo; primera_vez=true;}
+        if (start_ciclo & (Ciclo>0)) {estado=Estados::Esperando_ciclo; primera_vez=true;start_ciclo=false;}
+        else if (start_ciclo & (Ciclo==0)) {estado=Estados::Reposo; primera_vez=true;start_ciclo=false;}        
+        else if (Ciclo>0) {
+            if (stop) {estado=Estados::Esperando_ciclo; primera_vez=true;stop=false;}
             else      {estado=Estados::Esperando_ciclo; primera_vez=true;}
         }
         else {estado=Estados::Reposo; primera_vez=true;}
     break;  
     case Estados::Esperando_ciclo:
-        if (Ciclo>0) {estado=Estados::Ciclo_riego_1; primera_vez=true;}
+        if      (start[0]) {estado=Estados::Riego_1; primera_vez=true;start[0]=false;}
+        else if (start[1]) {estado=Estados::Riego_2; primera_vez=true;start[1]=false;}
+        else if (start[2]) {estado=Estados::Riego_3; primera_vez=true;start[2]=false;}
+        else if (start[3]) {estado=Estados::Riego_4; primera_vez=true;start[3]=false;}
+        else if (stop) {estado=Estados::Esperando_ciclo; stop=false;}
+        else if (start_ciclo) {estado=Estados::Ciclo_riego_1; primera_vez=true;}
+        else if (Ciclo>0) {estado=Estados::Ciclo_riego_1; primera_vez=true;}
         else {estado=Estados::Reposo; primera_vez=true;}
     break;
     case Estados::Configuracion:
@@ -237,19 +253,19 @@ String processor(const String &var)
     }
     else if (var == "duracion_1")
     {
-        return readFile(LittleFS, "/duracion_1.txt");
+        return readFile(LittleFS, "/duracion_0.txt");
     }
     else if (var == "duracion_2")
     {
-        return readFile(LittleFS, "/duracion_2.txt");
+        return readFile(LittleFS, "/duracion_1.txt");
     }
     else if (var == "duracion_3")
     {
-        return readFile(LittleFS, "/duracion_3.txt");
+        return readFile(LittleFS, "/duracion_2.txt");
     }
     else if (var == "duracion_4")
     {
-        return readFile(LittleFS, "/duracion_4.txt");
+        return readFile(LittleFS, "/duracion_3.txt");
     }
     else if (var == "ciclo")
     {
@@ -408,6 +424,12 @@ void callback(char *topic, byte *message, unsigned int length)
         s1_off();
     }
     
+    if (String(topic) == nombre_completo_start)
+    {
+        start_ciclo=true;
+        proximoEstado();
+    }
+
     if (String(topic) == nombre_completo_salida[0])
     {
         if (mensaje == "on")
@@ -512,9 +534,10 @@ void reconnect()
             }
             Serial.println(nombre_estado);
 
-            Serial.println(nombre_completo_salida_general);
+            Serial.println(nombre_completo_start);
             Serial.println(nombre_completo_ciclo);
             Serial.println(nombre_completo_tiempo_inicio);
+            Serial.println(nombre_completo_stop);
 
             Serial.println("");
 
@@ -523,9 +546,10 @@ void reconnect()
                 client.subscribe(nombre_completo_salida[i].c_str(), 1);
                 client.subscribe(nombre_completo_duracion[i].c_str(), 1);
             }
-            client.subscribe(nombre_completo_salida_general.c_str(), 1);
+            client.subscribe(nombre_completo_start.c_str(), 1);
             client.subscribe(nombre_completo_ciclo.c_str(), 1);
             client.subscribe(nombre_completo_tiempo_inicio.c_str(), 1);
+            client.subscribe(nombre_completo_stop.c_str(), 1);
         }
         else
         {
@@ -572,14 +596,32 @@ void servidorhttp()
       } 
       else if (request->hasParam("tiempo_inicio")) {
         inputMessage = request->getParam("tiempo_inicio")->value();
+        Tiempo_inicio=inputMessage.toInt()*minutos;
         writeFile(LittleFS, "/tiempo_inicio.txt", inputMessage.c_str());
       } 
-      else if (request->hasParam("duracion")) {
-        inputMessage = request->getParam("duracion")->value();
-        writeFile(LittleFS, "/duracion.txt", inputMessage.c_str());
+      else if (request->hasParam("duracion_1")) {
+        inputMessage = request->getParam("duracion_1")->value();
+        Duracion[0]=inputMessage.toInt()*minutos;
+        writeFile(LittleFS, "/duracion_0.txt", inputMessage.c_str());
+      } 
+      else if (request->hasParam("duracion_2")) {
+        inputMessage = request->getParam("duracion_2")->value();
+        Duracion[1]=inputMessage.toInt()*minutos;
+        writeFile(LittleFS, "/duracion_1.txt", inputMessage.c_str());
+      } 
+      else if (request->hasParam("duracion_3")) {
+        inputMessage = request->getParam("duracion_3")->value();
+        Duracion[2]=inputMessage.toInt()*minutos;
+        writeFile(LittleFS, "/duracion_2.txt", inputMessage.c_str());
+      } 
+      else if (request->hasParam("duracion_4")) {
+        inputMessage = request->getParam("duracion_4")->value();
+        Duracion[3]=inputMessage.toInt()*minutos;
+        writeFile(LittleFS, "/duracion_3.txt", inputMessage.c_str());
       } 
       else if (request->hasParam("ciclo")) {
         inputMessage = request->getParam("ciclo")->value();
+        Ciclo=inputMessage.toInt()*horas;
         writeFile(LittleFS, "/ciclo.txt", inputMessage.c_str());
       } 
       else if (request->hasParam("reiniciar")) {
@@ -588,6 +630,21 @@ void servidorhttp()
           ESP.restart();
         }
       } 
+      else if (request->hasParam("stop")) {
+        inputMessage = request->getParam("stop")->value();
+        if (inputMessage == "1") {
+          stop=true;
+          proximoEstado();
+        }
+      }
+      else if (request->hasParam("start")) {
+        inputMessage = request->getParam("start")->value();
+        if (inputMessage == "1") {
+            start_ciclo=true;
+            proximoEstado();
+        }
+      } 
+ 
       else {
         inputMessage = "No message sent";
       }
@@ -599,7 +656,6 @@ void servidorhttp()
 
 void setup()
 {
-
     Serial.begin(115200);
 
     pinMode(Entrada_configuracion, INPUT_PULLUP);
@@ -699,7 +755,7 @@ void setup()
         }
 
         nombre_estado = String(nombre_dispositivo) + "/" + "estado";
-        nombre_completo_salida_general = String(nombre_dispositivo) + "/" + "general";
+        nombre_completo_start = String(nombre_dispositivo) + "/" + "start";
         nombre_completo_tiempo_inicio = String(nombre_dispositivo) + "/" + "tiempo_inicio";
         nombre_completo_ciclo = String(nombre_dispositivo) + "/" + "ciclo";
         nombre_completo_stop = String(nombre_dispositivo) + "/" + "stop";
@@ -728,7 +784,7 @@ void comms()
     Serial.println("Inicio Reporte");
     Serial.println(estado);
     Serial.println(nombre_estado);
-    Serial.println(nombre_completo_salida_general);
+    Serial.println(nombre_completo_start);
     Serial.println(nombre_completo_ciclo);
     Serial.println(Ciclo);
     Serial.println(nombre_completo_tiempo_inicio);
@@ -740,19 +796,66 @@ void comms()
     String c[4] = {};
     String sa = nombre_estado + "c";
     String sc[4] = {};
+    String a="";
 
     for (int i = 0; i <= 3; i++)
     {
         t2[i] = Duracion[i] / minutos;
         c[i] = (String)t2[i];
         sc[i] = nombre_completo_duracion[i] + "c";
+        if (digitalRead(Salida[i])){
+            s1ctext[i]="on";
+        }
+        else {
+            s1ctext[i]="off";
+        }
     }
-    String a = (String)estado;
     String b = (String)t1;
     String d = (String)t3;
 
+    switch (estado) {
+        case 0:
+            a="Reposo";
+        break;
+        case 1:
+            a="Riego 1 manual";
+        break;
+        case 2:
+            a="Riego 2 manual";
+        break;
+        case 3:
+            a="Riego 3 manual";
+        break;
+        case 4:
+            a="Riego 4 manual";
+        break;
+        case 5:
+            a="Esperando inicio";
+        break;
+        case 6:
+            a="Esperando ciclo";
+        break;
+        case 7:
+            a="Riego 1 auto";
+        break;
+        case 8:
+            a="Riego 2 auto";
+        break;
+        case 9:
+            a="Riego 3 auto";
+        break;
+        case 10:
+            a="Riego 4 auto";
+        break;
+        case 11:
+            a="Configuracion";
+        break;
+    }
+
     String sb = nombre_completo_tiempo_inicio + "c";
     String sd = nombre_completo_ciclo + "c";
+    String stopc = nombre_completo_stop + "c";
+    String startc = nombre_completo_start + "c";
 
     for (int i = 0; i <= 3; i++)
     {
@@ -760,9 +863,25 @@ void comms()
         client.publish(s1c[i].c_str(), s1ctext[i].c_str()); // Actualiza estado salidas
     }
 
+    if (stop){
+        client.publish(stopc.c_str(), "on");
+    }
+    else{
+        client.publish(stopc.c_str(), "off");
+    }
+
+    if (start_ciclo){
+        client.publish(startc.c_str(), "on");
+    }
+    else{
+        client.publish(startc.c_str(), "off");
+    }
+    
     client.publish(sa.c_str(), a.c_str());
     client.publish(sb.c_str(), b.c_str());
     client.publish(sd.c_str(), d.c_str());
+
+
 }
 
 void loop()
@@ -800,18 +919,7 @@ void loop()
                     digitalWrite(Salida[2], LOW);
                     digitalWrite(Salida[3], LOW);
                     primera_vez=false;
-                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: off");
-                    s1ctext[0] = "off";
-                    s1ctext[1] = "off";
-                    s1ctext[2] = "off";
-                    s1ctext[3] = "off";
-                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
-                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
-                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
-                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                
+                    comms();
                 }
                 //Cambio por tiempo
                 
@@ -827,18 +935,8 @@ void loop()
                     digitalWrite(Salida[2], LOW);
                     digitalWrite(Salida[3], LOW);
                     primera_vez=false;
-                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: on");
-                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: off");
-                    s1ctext[0] = "on";
-                    s1ctext[1] = "off";
-                    s1ctext[2] = "off";
-                    s1ctext[3] = "off";
-                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
-                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
-                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
-                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
+                    comms();
+                  }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[0]) { 
                     proximoEstado(); 
@@ -856,18 +954,8 @@ void loop()
                     digitalWrite(Salida[2], LOW);
                     digitalWrite(Salida[3], LOW);
                     primera_vez=false;
-                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: on");
-                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: off");
-                    s1ctext[0] = "off";
-                    s1ctext[1] = "on";
-                    s1ctext[2] = "off";
-                    s1ctext[3] = "off";
-                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
-                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
-                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
-                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
+                    comms();
+                 }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[1]) { 
                     proximoEstado(); 
@@ -884,18 +972,8 @@ void loop()
                     digitalWrite(Salida[2], HIGH);
                     digitalWrite(Salida[3], LOW);
                     primera_vez=false;
-                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: on");
-                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: off");
-                    s1ctext[0] = "off";
-                    s1ctext[1] = "off";
-                    s1ctext[2] = "on";
-                    s1ctext[3] = "off";
-                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
-                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
-                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
-                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
+                    comms();
+                   }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[2]) { 
                     proximoEstado(); 
@@ -912,18 +990,8 @@ void loop()
                     digitalWrite(Salida[2], LOW);
                     digitalWrite(Salida[3], HIGH);
                     primera_vez=false;
-                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: on");
-                    s1ctext[0] = "off";
-                    s1ctext[1] = "off";
-                    s1ctext[2] = "off";
-                    s1ctext[3] = "on";
-                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
-                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
-                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
-                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
+                    comms();
+                   }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[3]) { 
                     proximoEstado(); 
@@ -940,18 +1008,8 @@ void loop()
                     digitalWrite(Salida[2], LOW);
                     digitalWrite(Salida[3], LOW);
                     primera_vez=false;
-                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: off");
-                    s1ctext[0] = "off";
-                    s1ctext[1] = "off";
-                    s1ctext[2] = "off";
-                    s1ctext[3] = "off";
-                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
-                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
-                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
-                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
+                    comms();
+                    }
                 //Cambio por tiempo
                 if (now - temp_estado > Tiempo_inicio) { 
                     proximoEstado(); 
@@ -967,18 +1025,8 @@ void loop()
                     digitalWrite(Salida[2], LOW);
                     digitalWrite(Salida[3], LOW);
                     primera_vez=false;
-                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: off");
-                    s1ctext[0] = "off";
-                    s1ctext[1] = "off";
-                    s1ctext[2] = "off";
-                    s1ctext[3] = "off";
-                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
-                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
-                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
-                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
+                    comms();
+                    }
                 //Cambio por tiempo
                 if (now - temp_ciclo > Ciclo) { 
                     proximoEstado(); 
@@ -996,18 +1044,8 @@ void loop()
                     digitalWrite(Salida[2], LOW);
                     digitalWrite(Salida[3], LOW);
                     primera_vez=false;
-                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: on");
-                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: off");
-                    s1ctext[0] = "on";
-                    s1ctext[1] = "off";
-                    s1ctext[2] = "off";
-                    s1ctext[3] = "off";
-                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
-                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
-                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
-                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
+                    comms();
+                   }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[0]) { 
                     proximoEstado(); 
@@ -1024,18 +1062,8 @@ void loop()
                     digitalWrite(Salida[2], LOW);
                     digitalWrite(Salida[3], LOW);
                     primera_vez=false;
-                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: on");
-                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: off");
-                    s1ctext[0] = "on";
-                    s1ctext[1] = "off";
-                    s1ctext[2] = "off";
-                    s1ctext[3] = "off";
-                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
-                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
-                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
-                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
+                    comms();
+                   }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[1]) { 
                     proximoEstado(); 
@@ -1052,18 +1080,8 @@ void loop()
                     digitalWrite(Salida[2], HIGH);
                     digitalWrite(Salida[3], LOW);
                     primera_vez=false;
-                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: on");
-                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: off");
-                    s1ctext[0] = "on";
-                    s1ctext[1] = "off";
-                    s1ctext[2] = "off";
-                    s1ctext[3] = "off";
-                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
-                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
-                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
-                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
+                    comms();
+                   }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[2]) { 
                     proximoEstado(); 
@@ -1080,18 +1098,8 @@ void loop()
                     digitalWrite(Salida[2], LOW);
                     digitalWrite(Salida[3], HIGH);
                     primera_vez=false;
-                    Serial.println("Cambiando " + nombre_completo_salida[0] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[1] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[2] + " a: off");
-                    Serial.println("Cambiando " + nombre_completo_salida[3] + " a: on");
-                    s1ctext[0] = "off";
-                    s1ctext[1] = "off";
-                    s1ctext[2] = "off";
-                    s1ctext[3] = "on";
-                    client.publish(s1c[0].c_str(), s1ctext[0].c_str());                
-                    client.publish(s1c[1].c_str(), s1ctext[1].c_str());                
-                    client.publish(s1c[2].c_str(), s1ctext[2].c_str());                
-                    client.publish(s1c[3].c_str(), s1ctext[3].c_str());                    }
+                    comms();
+                  }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[3]) { 
                     proximoEstado(); 
