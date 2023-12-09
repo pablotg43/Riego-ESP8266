@@ -16,11 +16,11 @@ const char *ssidhs = "ESP32-Access-Point";
 const char *passwordhs = "123456789";
 
 // Entradas Digitales
-const int Entrada_configuracion = 12;
+const int Entrada_configuracion = 14;
 int Valor_entrada_configuracion = 0;
 
 // Salidas Digitales
-const int Salida[4] = {5, 4, 0, 2};
+const int Salida[4] = {4, 5, 13, 12};
 
 enum Estados {
   Reposo,
@@ -40,11 +40,11 @@ enum Estados {
 Estados estado = Estados::Reposo;
 
 // Inicialización Variables
-// unsigned long horas = 3600000;
-// unsigned long minutos = 60000;
+unsigned long horas = 3600000;
+unsigned long minutos = 60000;
 
-unsigned long horas = 60000;
-unsigned long minutos = 1000;
+//unsigned long horas = 60000;
+//unsigned long minutos = 1000;
 
 //Temporizadores
 unsigned long now = 0;
