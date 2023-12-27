@@ -295,7 +295,7 @@ String processor(const String &var)
     }
     else if (var == "estado_señal_3")
     {
-        if (digitalRead(Salida[3]))
+        if (digitalRead(Salida[2]))
         {
             return "On";
         }
@@ -306,7 +306,7 @@ String processor(const String &var)
     }
     else if (var == "estado_señal_4")
     {
-        if (digitalRead(Salida[4]))
+        if (digitalRead(Salida[3]))
         {
             return "On";
         }
@@ -371,8 +371,9 @@ void s1_on(int i)
 
 void s1_off()
 {
+    start_ciclo=false;
     stop=true;
-    proximoEstado();
+    proximoEstado();    
 }
 
 void s2(String j, String tiempo)
@@ -404,6 +405,13 @@ void s4(String tiempo)
     proximoEstado();
 }
 
+void connect(const String& host, int port) 
+{ 
+    static char pHost[64] = {0}; 
+    strcpy(pHost, host.c_str()); 
+    client.setServer(pHost, port); 
+}
+
 void callback(char *topic, byte *message, unsigned int length)
 {
     Serial.println("");
@@ -421,13 +429,25 @@ void callback(char *topic, byte *message, unsigned int length)
 
     if (String(topic) == nombre_completo_stop)
     {
-        s1_off();
+        if (mensaje == "on")
+        {
+            s1_off();
+        }
+
+        String stopc = nombre_completo_stop + "c";
+        client.publish(stopc.c_str(), "off");
     }
     
     if (String(topic) == nombre_completo_start)
     {
-        start_ciclo=true;
-        proximoEstado();
+        if (mensaje == "on")
+        {
+            stop=false;
+            start_ciclo=true;
+            proximoEstado();
+        }
+        String startc = nombre_completo_start + "c";
+        client.publish(startc.c_str(), "off");
     }
 
     if (String(topic) == nombre_completo_salida[0])
@@ -507,6 +527,7 @@ void callback(char *topic, byte *message, unsigned int length)
     {
         s4(mensaje);
     }
+
 }
 
 void reconnect()
@@ -738,7 +759,7 @@ void setup()
 
         Serial.print("n1: ");
         Serial.println(n1);
-
+        
         numero_puerto_MQTT = puerto_MQTTa.toInt();
         nombre_dispositivo = dispositivoa.c_str();
 
@@ -760,7 +781,7 @@ void setup()
         nombre_completo_ciclo = String(nombre_dispositivo) + "/" + "ciclo";
         nombre_completo_stop = String(nombre_dispositivo) + "/" + "stop";
 
-        client.setServer(nmqtt, numero_puerto_MQTT);
+        connect(servidor_MQTTa, numero_puerto_MQTT);
         client.setCallback(callback);
 
         pinMode(Entrada_configuracion, INPUT_PULLUP);
@@ -854,8 +875,8 @@ void comms()
 
     String sb = nombre_completo_tiempo_inicio + "c";
     String sd = nombre_completo_ciclo + "c";
-    String stopc = nombre_completo_stop + "c";
-    String startc = nombre_completo_start + "c";
+    // String stopc = nombre_completo_stop + "c";
+    // String startc = nombre_completo_start + "c";
 
     for (int i = 0; i <= 3; i++)
     {
@@ -863,19 +884,19 @@ void comms()
         client.publish(s1c[i].c_str(), s1ctext[i].c_str()); // Actualiza estado salidas
     }
 
-    if (stop){
-        client.publish(stopc.c_str(), "on");
-    }
-    else{
-        client.publish(stopc.c_str(), "off");
-    }
+    // if (stop){
+    //     client.publish(stopc.c_str(), "on");
+    // }
+    // else{
+    //     client.publish(stopc.c_str(), "off");
+    // }
 
-    if (start_ciclo){
-        client.publish(startc.c_str(), "on");
-    }
-    else{
-        client.publish(startc.c_str(), "off");
-    }
+    // if (start_ciclo){
+    //     client.publish(startc.c_str(), "on");
+    // }
+    // else{
+    //     client.publish(startc.c_str(), "off");
+    // }
     
     client.publish(sa.c_str(), a.c_str());
     client.publish(sb.c_str(), b.c_str());
@@ -926,17 +947,19 @@ void loop()
                 break;
 
             case Estados::Riego_1:
-                if (primera_vez)
-                {
-                    temp_estado=now;
-                    //Estado
-                    digitalWrite(Salida[0], HIGH);
-                    digitalWrite(Salida[1], LOW);
-                    digitalWrite(Salida[2], LOW);
-                    digitalWrite(Salida[3], LOW);
-                    primera_vez=false;
-                    comms();
-                  }
+                if (Duracion[0]>0){    
+                    if (primera_vez)
+                    {
+                        temp_estado=now;
+                        //Estado
+                        digitalWrite(Salida[0], HIGH);
+                        digitalWrite(Salida[1], LOW);
+                        digitalWrite(Salida[2], LOW);
+                        digitalWrite(Salida[3], LOW);
+                        primera_vez=false;
+                        comms();
+                    }
+                }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[0]) { 
                     proximoEstado(); 
@@ -945,17 +968,19 @@ void loop()
                 break;
 
             case Estados::Riego_2:
-                if (primera_vez)
-                {                
-                    temp_estado=now;
-                    //Estado
-                    digitalWrite(Salida[0], LOW);
-                    digitalWrite(Salida[1], HIGH);
-                    digitalWrite(Salida[2], LOW);
-                    digitalWrite(Salida[3], LOW);
-                    primera_vez=false;
-                    comms();
-                 }
+                if (Duracion[1]>0){    
+                    if (primera_vez)
+                    {                
+                        temp_estado=now;
+                        //Estado
+                        digitalWrite(Salida[0], LOW);
+                        digitalWrite(Salida[1], HIGH);
+                        digitalWrite(Salida[2], LOW);
+                        digitalWrite(Salida[3], LOW);
+                        primera_vez=false;
+                        comms();
+                    }
+                }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[1]) { 
                     proximoEstado(); 
@@ -963,17 +988,19 @@ void loop()
                 break;
 
             case Estados::Riego_3:
-                if (primera_vez)
-                {
-                    temp_estado=now;
-                    //Estado
-                    digitalWrite(Salida[0], LOW);
-                    digitalWrite(Salida[1], LOW);
-                    digitalWrite(Salida[2], HIGH);
-                    digitalWrite(Salida[3], LOW);
-                    primera_vez=false;
-                    comms();
-                   }
+                if (Duracion[2]>0){    
+                    if (primera_vez)
+                    {
+                        temp_estado=now;
+                        //Estado
+                        digitalWrite(Salida[0], LOW);
+                        digitalWrite(Salida[1], LOW);
+                        digitalWrite(Salida[2], HIGH);
+                        digitalWrite(Salida[3], LOW);
+                        primera_vez=false;
+                        comms();
+                    }
+                }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[2]) { 
                     proximoEstado(); 
@@ -981,17 +1008,19 @@ void loop()
                 break;
 
             case Estados::Riego_4:
-                if (primera_vez)
-                {                
-                    temp_estado=now;
-                    //Estado
-                    digitalWrite(Salida[0], LOW);
-                    digitalWrite(Salida[1], LOW);
-                    digitalWrite(Salida[2], LOW);
-                    digitalWrite(Salida[3], HIGH);
-                    primera_vez=false;
-                    comms();
-                   }
+                if (Duracion[3]>0){    
+                    if (primera_vez)
+                    {                
+                        temp_estado=now;
+                        //Estado
+                        digitalWrite(Salida[0], LOW);
+                        digitalWrite(Salida[1], LOW);
+                        digitalWrite(Salida[2], LOW);
+                        digitalWrite(Salida[3], HIGH);
+                        primera_vez=false;
+                        comms();
+                    }
+                }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[3]) { 
                     proximoEstado(); 
@@ -1034,18 +1063,20 @@ void loop()
                 break;
 
             case Estados::Ciclo_riego_1:
-                if (primera_vez)
-                {                
-                    temp_estado=now;
-                    temp_ciclo=now;
-                    //Estado
-                    digitalWrite(Salida[0], HIGH);
-                    digitalWrite(Salida[1], LOW);
-                    digitalWrite(Salida[2], LOW);
-                    digitalWrite(Salida[3], LOW);
-                    primera_vez=false;
-                    comms();
-                   }
+                if (Duracion[0]>0){    
+                    if (primera_vez)
+                    {                
+                        temp_estado=now;
+                        temp_ciclo=now;
+                        //Estado
+                        digitalWrite(Salida[0], HIGH);
+                        digitalWrite(Salida[1], LOW);
+                        digitalWrite(Salida[2], LOW);
+                        digitalWrite(Salida[3], LOW);
+                        primera_vez=false;
+                        comms();
+                    }
+                }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[0]) { 
                     proximoEstado(); 
@@ -1053,17 +1084,19 @@ void loop()
                 break;
 
             case Estados::Ciclo_riego_2:
-                if (primera_vez)
-                {                
-                    temp_estado=now;
-                    //Estado
-                    digitalWrite(Salida[0], LOW);
-                    digitalWrite(Salida[1], HIGH);
-                    digitalWrite(Salida[2], LOW);
-                    digitalWrite(Salida[3], LOW);
-                    primera_vez=false;
-                    comms();
-                   }
+                if (Duracion[1]>0){    
+                    if (primera_vez)
+                    {                
+                        temp_estado=now;
+                        //Estado
+                        digitalWrite(Salida[0], LOW);
+                        digitalWrite(Salida[1], HIGH);
+                        digitalWrite(Salida[2], LOW);
+                        digitalWrite(Salida[3], LOW);
+                        primera_vez=false;
+                        comms();
+                    }
+                }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[1]) { 
                     proximoEstado(); 
@@ -1071,17 +1104,19 @@ void loop()
                 break;
 
             case Estados::Ciclo_riego_3:
-                if (primera_vez)
-                {                
-                    temp_estado=now;
-                    //Estado
-                    digitalWrite(Salida[0], LOW);
-                    digitalWrite(Salida[1], LOW);
-                    digitalWrite(Salida[2], HIGH);
-                    digitalWrite(Salida[3], LOW);
-                    primera_vez=false;
-                    comms();
-                   }
+                if (Duracion[2]>0){    
+                    if (primera_vez)
+                    {                
+                        temp_estado=now;
+                        //Estado
+                        digitalWrite(Salida[0], LOW);
+                        digitalWrite(Salida[1], LOW);
+                        digitalWrite(Salida[2], HIGH);
+                        digitalWrite(Salida[3], LOW);
+                        primera_vez=false;
+                        comms();
+                    }
+                }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[2]) { 
                     proximoEstado(); 
@@ -1089,17 +1124,19 @@ void loop()
                 break;
     
             case Estados::Ciclo_riego_4:
-                if (primera_vez)
-                {                
-                    temp_estado=now;
-                    //Estado
-                    digitalWrite(Salida[0], LOW);
-                    digitalWrite(Salida[1], LOW);
-                    digitalWrite(Salida[2], LOW);
-                    digitalWrite(Salida[3], HIGH);
-                    primera_vez=false;
-                    comms();
-                  }
+                if (Duracion[3]>0){    
+                    if (primera_vez)
+                    {                
+                        temp_estado=now;
+                        //Estado
+                        digitalWrite(Salida[0], LOW);
+                        digitalWrite(Salida[1], LOW);
+                        digitalWrite(Salida[2], LOW);
+                        digitalWrite(Salida[3], HIGH);
+                        primera_vez=false;
+                        comms();
+                    }
+                }
                 //Cambio por tiempo
                 if (now - temp_estado > Duracion[3]) { 
                     proximoEstado(); 
