@@ -15,6 +15,8 @@ const char *password = "123456789";
 const char *ssidhs = "ESP32-Access-Point";
 const char *passwordhs = "123456789";
 
+int errors=0;
+
 // Entradas Digitales
 const int Entrada_configuracion = 14;
 int Valor_entrada_configuracion = 0;
@@ -536,6 +538,11 @@ void reconnect()
 
     while (!client.connected())
     {
+        if ((WiFi.status() != WL_CONNECTED))
+        {
+            setup_wifi();
+        }
+         
         Serial.print("Conectando a servidor MQTT...");
         // Attempt to connect
         String clientId = "WemoClient-";
@@ -571,6 +578,8 @@ void reconnect()
             client.subscribe(nombre_completo_ciclo.c_str(), 1);
             client.subscribe(nombre_completo_tiempo_inicio.c_str(), 1);
             client.subscribe(nombre_completo_stop.c_str(), 1);
+
+            errors=0;
         }
         else
         {
@@ -578,6 +587,10 @@ void reconnect()
             Serial.print(client.state());
             Serial.println(" reintantando en 5 segundos");
             delay(5000);
+            errors+=1;
+            if (errors>100) {
+                ESP.restart();
+            }
         }
     }
 }
