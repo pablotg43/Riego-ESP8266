@@ -589,6 +589,7 @@ void reconnect()
             delay(5000);
             errors+=1;
             if (errors>100) {
+                errors=0;
                 ESP.restart();
             }
         }
