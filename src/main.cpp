@@ -358,10 +358,16 @@ void setup_wifi()
     {
         Serial.print(".");
         delay(250);
+        errors++;
+        if (errors>200) {
+            errors=0;
+            ESP.restart();
+        }
     }
+    errors=0;
     Serial.println("");
     Serial.println("WiFi Conectada");
-    Serial.println("Direccion IP: ");
+    Serial.print("Direccion IP: ");
     Serial.println(WiFi.localIP());
 }
 
@@ -419,7 +425,7 @@ void callback(char *topic, byte *message, unsigned int length)
     Serial.println("");
     Serial.print("Mensaje recibido en topic: ");
     Serial.println(topic);
-    Serial.println("Mensaje: ");
+    Serial.print("Mensaje: ");
 
     String mensaje;
 
@@ -428,7 +434,7 @@ void callback(char *topic, byte *message, unsigned int length)
         Serial.print((char)message[i]);
         mensaje += (char)message[i];
     }
-
+    Serial.println("");
     if (String(topic) == nombre_completo_stop)
     {
         if (mensaje == "on")
@@ -540,6 +546,8 @@ void reconnect()
     {
         if ((WiFi.status() != WL_CONNECTED))
         {
+            WiFi.disconnect();
+            delay(1000);
             setup_wifi();
         }
          
@@ -588,7 +596,9 @@ void reconnect()
             Serial.println(" reintantando en 5 segundos");
             delay(5000);
             errors+=1;
-            if (errors>100) {
+            Serial.print("errors: ");
+            Serial.println(errors);
+            if (errors>10) {
                 errors=0;
                 ESP.restart();
             }
@@ -811,19 +821,12 @@ void comms()
 {
     temp_comms = now;
 
-    for (int i = 0; i <= 3; i++)
-    {
-        Serial.println(nombre_completo_duracion[i]);
-        Serial.println(Duracion[i]);
-    }
-    Serial.println("Inicio Reporte");
-    Serial.println(estado);
-    Serial.println(nombre_estado);
-    Serial.println(nombre_completo_start);
-    Serial.println(nombre_completo_ciclo);
-    Serial.println(Ciclo);
-    Serial.println(nombre_completo_tiempo_inicio);
-    Serial.println(Tiempo_inicio);
+//    for (int i = 0; i <= 3; i++)
+//    {
+//        Serial.println(nombre_completo_duracion[i]);
+//        Serial.println(Duracion[i]);
+//    }
+
 
     unsigned long t1 = Tiempo_inicio / minutos;
     unsigned long t2[4] = {};
@@ -887,6 +890,16 @@ void comms()
         break;
     }
 
+    Serial.print("Inicio Reporte: ");
+    Serial.println(millis());
+    Serial.print("estado: ");
+    Serial.println(estado);
+    Serial.print("nombre_estado: ");
+    Serial.println(a);
+    Serial.print("errors: ");
+    Serial.println(errors);
+    Serial.println(" ---------------------------------");
+    
     String sb = nombre_completo_tiempo_inicio + "c";
     String sd = nombre_completo_ciclo + "c";
     // String stopc = nombre_completo_stop + "c";
